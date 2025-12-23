@@ -12,9 +12,9 @@ import {
   assertNotOnBaseBranch,
 } from "~/utils/git.js";
 import { getConfig } from "~/utils/config.js";
-import { generatePRContent, type PRContext } from "~/utils/groq.js";
+import { generatePRContent } from "~/utils/groq.js";
 import { KnownError, handleCliError } from "~/errors.js";
-import { getPRPromptFile } from "~/utils/prompt.js";
+import { getPRPromptFile, type PRContext } from "~/utils/prompt.js";
 
 const runPR = async (baseBranchOverride?: string, isDraft?: boolean) => {
   intro(bgCyan(black(" dash pr ")));
@@ -108,7 +108,9 @@ const runPR = async (baseBranchOverride?: string, isDraft?: boolean) => {
   const finalBody = String(editedBody || "").trim();
 
   const proceed = await confirm({
-    message: `Create ${isDraft ? "draft " : ""}PR "${finalTitle}" targeting ${baseBranch}?`,
+    message: `Create ${
+      isDraft ? "draft " : ""
+    }PR "${finalTitle}" targeting ${baseBranch}?`,
   });
 
   if (!proceed || isCancel(proceed)) {
@@ -172,5 +174,3 @@ export default command(
     });
   }
 );
-
-

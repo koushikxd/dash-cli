@@ -2,6 +2,13 @@ import type { CommitType } from "~/utils/config.js";
 import { findUp, readFile } from "~/utils/fs.js";
 import { assertGitRepo } from "~/utils/git.js";
 
+export interface PRContext {
+  branchName: string;
+  baseBranch: string;
+  commits: Array<{ message: string; body: string }>;
+  stats: { files: number; insertions: number; deletions: number };
+}
+
 const commitTypeFormats: Record<CommitType, string> = {
   "": "<commit message>",
   conventional: "<type>(<optional scope>): <commit message>",
@@ -123,4 +130,64 @@ export const getPRPromptFile = async (): Promise<string | null> => {
   });
   if (!promptPath) return null;
   return readFile(promptPath);
+};
+
+export const generatePRSystemPrompt = (
+  customPrompt?: string | null
+): string => {
+  if (customPrompt) {
+    return `You are a professional developer writing pull request descriptions. Follow the user's guidelines.`;
+  }
+
+  return `You are a professional developer writing pull request descriptions.
+Write clear, concise, and informative PR titles and descriptions.
+Focus on WHAT changed and WHY, not HOW.
+Use markdown formatting for the body.`;
+};
+
+export const buildPRPrompt = (
+  context: PRContext,
+  customPrompt?: string | null
+): string => {
+  const commitList = context.commits
+    .map((c, i) => `${i + 1}. ${c.message}${c.body ? `\n   ${c.body}` : ""}`)
+    .join("\n");
+
+  const contextInfo = `BRANCH: ${context.branchName}
+BASE BRANCH: ${context.baseBranch}
+STATS: ${context.stats.files} files changed, +${context.stats.insertions} -${context.stats.deletions}
+
+COMMITS (${context.commits.length} total):
+${commitList}`;
+
+  if (customPrompt) {
+    return `${customPrompt}
+
+${contextInfo}
+
+FORMAT YOUR RESPONSE EXACTLY LIKE THIS:
+TITLE: <your title here>
+BODY:
+<your markdown body here>
+
+Do not include any other text or explanations.`;
+  }
+
+  return `Generate a pull request title and description based on the following context.
+
+${contextInfo}
+
+REQUIREMENTS:
+1. Title: Concise, descriptive summary (max 72 chars). Use conventional commit style if commits follow it.
+2. Body: Markdown formatted with:
+   - Brief summary of changes (1-2 sentences)
+   - List of key changes (bullet points)
+   - Any breaking changes or important notes if applicable
+
+FORMAT YOUR RESPONSE EXACTLY LIKE THIS:
+TITLE: <your title here>
+BODY:
+<your markdown body here>
+
+Do not include any other text or explanations.`;
 };

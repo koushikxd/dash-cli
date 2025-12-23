@@ -1,7 +1,12 @@
 import Groq from "groq-sdk";
 import { KnownError } from "~/errors.js";
 import type { CommitType } from "~/utils/config.js";
-import { generatePrompt } from "~/utils/prompt.js";
+import {
+  generatePrompt,
+  generatePRSystemPrompt,
+  buildPRPrompt,
+  type PRContext,
+} from "~/utils/prompt.js";
 
 const createChatCompletion = async (
   apiKey: string,
@@ -167,7 +172,9 @@ const deriveMessageFromReasoning = (
   let candidate = match ? match[0] : cleaned.split(/[.!?]/)[0];
 
   if (!match && candidate.length < 10) {
-    const sentences = cleaned.split(/[.!?]/).filter((s) => s.trim().length > 10);
+    const sentences = cleaned
+      .split(/[.!?]/)
+      .filter((s) => s.trim().length > 10);
     if (sentences.length > 0) {
       candidate = sentences[0].trim();
     }
@@ -251,57 +258,6 @@ export interface PRContent {
   body: string;
 }
 
-export interface PRContext {
-  branchName: string;
-  baseBranch: string;
-  commits: Array<{ message: string; body: string }>;
-  stats: { files: number; insertions: number; deletions: number };
-}
-
-const buildPRPrompt = (context: PRContext, customPrompt?: string | null): string => {
-  const commitList = context.commits
-    .map((c, i) => `${i + 1}. ${c.message}${c.body ? `\n   ${c.body}` : ""}`)
-    .join("\n");
-
-  const contextInfo = `BRANCH: ${context.branchName}
-BASE BRANCH: ${context.baseBranch}
-STATS: ${context.stats.files} files changed, +${context.stats.insertions} -${context.stats.deletions}
-
-COMMITS (${context.commits.length} total):
-${commitList}`;
-
-  if (customPrompt) {
-    return `${customPrompt}
-
-${contextInfo}
-
-FORMAT YOUR RESPONSE EXACTLY LIKE THIS:
-TITLE: <your title here>
-BODY:
-<your markdown body here>
-
-Do not include any other text or explanations.`;
-  }
-
-  return `Generate a pull request title and description based on the following context.
-
-${contextInfo}
-
-REQUIREMENTS:
-1. Title: Concise, descriptive summary (max 72 chars). Use conventional commit style if commits follow it.
-2. Body: Markdown formatted with:
-   - Brief summary of changes (1-2 sentences)
-   - List of key changes (bullet points)
-   - Any breaking changes or important notes if applicable
-
-FORMAT YOUR RESPONSE EXACTLY LIKE THIS:
-TITLE: <your title here>
-BODY:
-<your markdown body here>
-
-Do not include any other text or explanations.`;
-};
-
 const parsePRResponse = (response: string): PRContent => {
   const titleMatch = response.match(/TITLE:\s*(.+?)(?:\n|BODY:)/s);
   const bodyMatch = response.match(/BODY:\s*([\s\S]+)/);
@@ -320,18 +276,11 @@ export const generatePRContent = async (
   proxy?: string,
   customPrompt?: string | null
 ): Promise<PRContent> => {
-  const systemPrompt = customPrompt
-    ? `You are a professional developer writing pull request descriptions. Follow the user's guidelines.`
-    : `You are a professional developer writing pull request descriptions.
-Write clear, concise, and informative PR titles and descriptions.
-Focus on WHAT changed and WHY, not HOW.
-Use markdown formatting for the body.`;
-
   const completion = await createChatCompletion(
     apiKey,
     model,
     [
-      { role: "system", content: systemPrompt },
+      { role: "system", content: generatePRSystemPrompt(customPrompt) },
       { role: "user", content: buildPRPrompt(context, customPrompt) },
     ],
     0.4,
@@ -363,4 +312,3 @@ Use markdown formatting for the body.`;
 
   return parsed;
 };
-
