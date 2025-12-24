@@ -1,5 +1,6 @@
 import { execa } from "execa";
 import { KnownError } from "~/errors.js";
+import { getConfig } from "~/utils/config.js";
 
 export const assertGitRepo = async () => {
   const { stdout, failed } = await execa(
@@ -273,14 +274,58 @@ export const getCommitsSinceBase = async (
   }
 };
 
-export const assertGhInstalled = async (): Promise<void> => {
+export const isGhInstalled = async (): Promise<boolean> => {
   try {
     await execa("gh", ["--version"]);
+    return true;
   } catch {
+    return false;
+  }
+};
+
+export const isGhEnabled = async (): Promise<boolean> => {
+  const config = await getConfig({}, true);
+  return config.gh_enabled;
+};
+
+export const assertGhInstalled = async (): Promise<void> => {
+  const ghEnabled = await isGhEnabled();
+  if (!ghEnabled) {
+    throw new KnownError(
+      "GitHub CLI features are disabled.\n" +
+        "Run `dash setup` to enable them."
+    );
+  }
+
+  const installed = await isGhInstalled();
+  if (!installed) {
     throw new KnownError(
       "GitHub CLI (gh) is not installed or not in PATH.\n" +
-        "Install it from: https://cli.github.com/"
+        "Install it from: https://cli.github.com/\n" +
+        "Then run `dash setup` to configure."
     );
+  }
+};
+
+export interface ExistingPR {
+  number: number;
+  title: string;
+  body: string;
+  url: string;
+  state: string;
+}
+
+export const getExistingPR = async (): Promise<ExistingPR | null> => {
+  try {
+    const { stdout } = await execa("gh", [
+      "pr",
+      "view",
+      "--json",
+      "number,title,body,url,state",
+    ]);
+    return JSON.parse(stdout);
+  } catch {
+    return null;
   }
 };
 

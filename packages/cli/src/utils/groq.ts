@@ -312,3 +312,122 @@ export const generatePRContent = async (
 
   return parsed;
 };
+
+export interface ExistingPRInfo {
+  number: number;
+  title: string;
+  body: string;
+  url: string;
+  state: string;
+}
+
+export const generatePRUpdateContent = async (
+  apiKey: string,
+  model: string,
+  existingPR: ExistingPRInfo,
+  editRequest: string,
+  context: PRContext,
+  timeout: number,
+  proxy?: string,
+  customPrompt?: string | null
+): Promise<PRContent> => {
+  const systemPrompt = `You are a professional developer updating a pull request description.
+You will be given the current PR title and body, along with a user's request for changes.
+Update the PR to incorporate the requested changes while preserving relevant existing content.
+Use markdown formatting for the body.`;
+
+  const userPrompt = `CURRENT PR #${existingPR.number}:
+Title: ${existingPR.title}
+Body:
+${existingPR.body || "(empty)"}
+
+USER'S EDIT REQUEST:
+${editRequest}
+
+LATEST COMMITS:
+${context.commits.map((c, i) => `${i + 1}. ${c.message}`).join("\n")}
+
+STATS: ${context.stats.files} files changed, +${context.stats.insertions} -${context.stats.deletions}
+
+Generate an updated PR title and description that incorporates the user's requested changes.
+
+FORMAT YOUR RESPONSE EXACTLY LIKE THIS:
+TITLE: <your updated title here>
+BODY:
+<your updated markdown body here>
+
+Do not include any other text or explanations.`;
+
+  const completion = await createChatCompletion(
+    apiKey,
+    model,
+    [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ],
+    0.4,
+    1,
+    0,
+    0,
+    1500,
+    1,
+    timeout,
+    proxy
+  );
+
+  const content = completion.choices?.[0]?.message?.content || "";
+  const parsed = parsePRResponse(content);
+
+  if (!parsed.title) {
+    parsed.title = existingPR.title;
+  }
+
+  if (!parsed.body) {
+    parsed.body = existingPR.body || "";
+  }
+
+  return parsed;
+};
+
+export const generateMergeCommitMessage = async (
+  apiKey: string,
+  model: string,
+  prTitle: string,
+  prBody: string,
+  timeout: number,
+  proxy?: string
+): Promise<string> => {
+  const systemPrompt = `You are generating a concise merge commit message for a pull request.
+The message should summarize what the PR accomplishes in one line.
+Keep it under 72 characters. Use imperative mood.
+Do not include PR numbers or branch names.`;
+
+  const userPrompt = `PR Title: ${prTitle}
+
+PR Description:
+${prBody.slice(0, 1000)}
+
+Generate a concise merge commit message. Return only the message, nothing else.`;
+
+  const completion = await createChatCompletion(
+    apiKey,
+    model,
+    [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ],
+    0.3,
+    1,
+    0,
+    0,
+    100,
+    1,
+    timeout,
+    proxy
+  );
+
+  const content = completion.choices?.[0]?.message?.content || "";
+  const message = sanitizeMessage(content);
+
+  return message || prTitle;
+};

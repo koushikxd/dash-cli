@@ -118,6 +118,12 @@ const configParsers = {
 
     return parsed;
   },
+  gh_enabled(enabled?: string) {
+    if (!enabled) {
+      return true;
+    }
+    return enabled === "true";
+  },
 } as const;
 
 type ConfigKeys = keyof typeof configParsers;

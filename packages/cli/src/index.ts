@@ -4,8 +4,10 @@ import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import commitCommand from "~/commands/commit.js";
 import prCommand from "~/commands/pr.js";
+import issueCommand from "~/commands/issue.js";
 import configCommand from "~/commands/config.js";
 import hookCommand, { isCalledFromGitHook } from "~/commands/hook.js";
+import setupCommand from "~/commands/setup.js";
 import prepareCommitMessageHook from "~/commands/prepare-commit-msg-hook.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -24,7 +26,7 @@ if (isCalledFromGitHook) {
     {
       name: "dash",
       version,
-      commands: [commitCommand, prCommand, configCommand, hookCommand],
+      commands: [commitCommand, prCommand, issueCommand, configCommand, hookCommand, setupCommand],
       help: {
         description,
       },
