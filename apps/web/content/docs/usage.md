@@ -1,0 +1,197 @@
+---
+title: Usage
+description: Use dash's commands and features.
+---
+
+Everything you can do with dash.
+
+## Commit messages
+
+### Basic use
+
+```bash
+git add .
+dash commit
+```
+
+Dash shows you a message. Use it, edit it, or cancel.
+
+### Stage everything
+
+```bash
+dash commit --all
+```
+
+Same as `git commit --all`—stages tracked files before committing.
+
+### Multiple options
+
+```bash
+dash commit --generate 3
+```
+
+Generates 3 messages to choose from. Uses more tokens.
+
+### Conventional commits
+
+```bash
+dash commit --type conventional
+```
+
+Follows the [Conventional Commits](https://conventionalcommits.org/) format.
+
+### Exclude files
+
+```bash
+dash commit --exclude package-lock.json --exclude dist/
+```
+
+Ignores certain files when analyzing changes.
+
+## Pull requests
+
+Requires [GitHub CLI](https://cli.github.com/) installed and authenticated.
+
+### Create PR
+
+```bash
+dash pr
+```
+
+Analyzes your commits, generates title and description, creates the PR. If a PR exists, you can edit it.
+
+```bash
+dash pr --draft
+
+dash pr --base develop
+```
+
+### List PRs
+
+```bash
+dash pr list
+```
+
+### View current PR
+
+```bash
+dash pr view
+```
+
+### Merge PR
+
+```bash
+dash pr merge
+
+dash pr merge --squash
+dash pr merge --merge
+dash pr merge --rebase
+```
+
+## Issues
+
+```bash
+dash issue list
+
+dash issue list --state all
+dash issue list --limit 10
+```
+
+## Git hooks
+
+Auto-generate messages when you run `git commit`.
+
+### Install
+
+```bash
+dash hook install
+```
+
+### Use
+
+```bash
+git add .
+git commit
+```
+
+Dash generates the message, Git opens your editor to review it. Save and close to commit.
+
+Want your own message? Use `git commit -m "message"` as usual.
+
+### Uninstall
+
+```bash
+dash hook uninstall
+```
+
+## Custom prompts
+
+Create a `.dash` folder with custom rules:
+
+```bash
+mkdir .dash
+```
+
+**`.dash/commit.md`** - Commit message guidelines:
+
+```markdown
+Use present tense. Include ticket numbers.
+```
+
+**`.dash/pr.md`** - PR description guidelines:
+
+```markdown
+Include testing steps and ticket links.
+```
+
+When these files exist, dash uses them instead of the default prompts.
+
+### Monorepo support
+
+Dash searches up the directory tree, so you can have different prompts per package:
+
+```
+monorepo/
+├── .dash/commit.md         # Global rules
+└── packages/
+    ├── api/.dash/commit.md # API-specific rules
+    └── web/.dash/commit.md # Web-specific rules
+```
+
+Run `dash commit` in any package, and it uses the nearest `.dash` prompts.
+
+## Large diffs
+
+Dash handles big changes automatically. It summarizes stats and includes code snippets so you never hit API limits.
+
+## Command reference
+
+```bash
+dash commit [-g <n>] [-x <files>] [-a] [-t <type>]
+dash pr [create|list|view|merge] [-b <branch>] [-d]
+dash issue list [-s <state>] [-l <n>]
+dash hook <install|uninstall>
+dash config <get|set> <key=value>
+dash setup
+```
+
+## Quick examples
+
+```bash
+git add .
+dash commit
+
+dash commit --all --generate 3
+
+dash commit --type conventional --exclude dist/
+
+dash pr --draft --base develop
+
+dash pr merge --squash
+
+dash issue list --state all --limit 10
+
+dash hook install
+```
+
+Need more details? Check [Configuration](/docs/configuration).

@@ -14,7 +14,7 @@ export const handleCliError = (error: unknown) => {
     console.error(
       `\n${indent}Please open a Bug report with the information above:`
     );
-    console.error(`${indent}https://github.com/koushikxd/dash/issues/new`);
+    console.error(`${indent}https://github.com/koushikxd/dash-cli/issues/new`);
   }
 };
 

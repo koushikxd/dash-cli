@@ -1,63 +1,64 @@
 # Dash
 
-AI-powered Git workflow CLI. Generate commit messages, create pull requests, and manage issues with intelligent assistance.
+AI-powered Git CLI. Generate commit messages, create PRs, manage issues—all from your terminal.
 
-## Installation
+## Install
 
 ```bash
-npm install -g @koushik/dash
+npm install -g @koushik_xd/dash
 ```
 
 ## Setup
 
-Get your API key from [Groq Console](https://console.groq.com/keys) and configure:
+Get your free API key from [console.groq.com/keys](https://console.groq.com/keys):
 
 ```bash
-dash config set GROQ_API_KEY=gsk_your_api_key_here
+dash config set GROQ_API_KEY=gsk_your_key_here
 ```
 
 Or use an environment variable:
 
 ```bash
-export GROQ_API_KEY=gsk_your_api_key_here
+export GROQ_API_KEY=gsk_your_key_here
+```
+
+## Quick start
+
+```bash
+git add .
+dash commit
+
+dash pr
 ```
 
 ## Commands
 
 ### Commit
 
-Generate AI-powered commit messages from staged changes:
-
 ```bash
 dash commit
-```
 
-Options:
-
-```bash
-dash commit --all              # Stage all tracked files before committing
-dash commit --generate 3       # Generate multiple message options
-dash commit --exclude file.ts  # Exclude files from analysis
+dash commit --all
+dash commit --generate 3
+dash commit --exclude dist/
 dash commit --type conventional
 ```
 
-### Pull Requests
+### Pull requests
 
-Create and manage pull requests with AI-generated titles and descriptions:
+Requires [GitHub CLI](https://cli.github.com/).
 
 ```bash
-dash pr                  # Create a new PR
-dash pr create --draft   # Create as draft
-dash pr create --base develop
-dash pr list             # List open PRs
-dash pr view             # View current branch's PR
-dash pr merge            # Merge current PR
-dash pr merge --squash   # Squash and merge
+dash pr
+dash pr --draft
+dash pr --base develop
+
+dash pr list
+dash pr view
+dash pr merge --squash
 ```
 
 ### Issues
-
-List repository issues:
 
 ```bash
 dash issue list
@@ -65,59 +66,71 @@ dash issue list --state all
 dash issue list --limit 10
 ```
 
-### Git Hook
-
-Install a git hook to automatically generate commit messages:
+### Git hook
 
 ```bash
 dash hook install
 dash hook uninstall
 ```
 
+Then `git commit` auto-generates messages.
+
 ## Configuration
 
-All configuration is stored in `~/.dash`.
+Config lives in `~/.dash`:
 
 ```bash
 dash config set <key>=<value>
 dash config get <key>
 ```
 
-Available options:
-
-| Option       | Default            | Description                    |
-| ------------ | ------------------ | ------------------------------ |
-| GROQ_API_KEY | -                  | Groq API key (required)        |
-| model        | openai/gpt-oss-20b | AI model                       |
-| locale       | en                 | Commit message language        |
-| max-length   | 100                | Max commit message length      |
-| timeout      | 10000              | API timeout in ms              |
-| generate     | 1                  | Number of messages to generate |
+| Option       | Default            | Description          |
+| ------------ | ------------------ | -------------------- |
+| GROQ_API_KEY | -                  | API key (required)   |
+| model        | openai/gpt-oss-20b | AI model             |
+| generate     | 1                  | Messages to generate |
+| type         | -                  | Use `conventional`   |
+| max-length   | 100                | Max message length   |
+| locale       | en                 | Message language     |
 
 Examples:
 
 ```bash
 dash config set model=llama-3.3-70b-versatile
-dash config set max-length=72
-dash config set locale=en
+dash config set type=conventional max-length=72
 ```
 
-## Custom Prompts
+## Custom prompts
 
-Create a `.dash-commit-prompt` file in your repository root to customize commit message generation:
+Create a `.dash` folder in your repo with custom guidelines:
 
+**`.dash/commit.md`** - Commit rules:
+
+```markdown
+Use present tense. Include ticket numbers.
 ```
-Generate commit messages following our team conventions.
-Always use present tense and reference ticket numbers when available.
+
+**`.dash/pr.md`** - PR rules:
+
+```markdown
+Include testing steps and related tickets.
 ```
 
-For PR generation, create `.dash-pr-prompt`.
+Dash uses these instead of default prompts. Works with monorepos—searches up the tree to find the nearest `.dash` folder.
+
+## Documentation
+
+Full docs at [koushikxd.github.io/dash-cli](https://koushikxd.github.io/dash-cli)
 
 ## Requirements
 
 - Node.js 18+
 - Git
-- GitHub CLI (`gh`) for PR and issue commands
+- GitHub CLI (for PR/issue commands)
+
+## Acknowledgments
+
+Inspired by [noto](https://github.com/snelusha/noto) by Sithija Nelusha Silva.
 
 ## License
 
