@@ -1,7 +1,7 @@
 {
   "name": "@koushik_xd/dash",
-  "version": "1.3.0",
-  "description": "AI-powered git commit message generator",
+  "version": "1.4.1",
+  "description": "AI-powered Git CLI for commit messages, PRs, and issues",
   "license": "MIT",
   "type": "module",
   "author": {
@@ -19,7 +19,8 @@
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "dash": "dist/index.js"
+    "dash": "dist/index.js",
+    "dash-cli": "dist/index.js"
   },
   "scripts": {
     "build": "bunup --clean",

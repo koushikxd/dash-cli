@@ -26,6 +26,8 @@ dash setup
 
 This checks your setup and helps configure GitHub CLI if you have it.
 
+> **Linux users:** If you have the system shell `dash` installed (common on Debian/Ubuntu), use `dash-cli` instead of `dash` for all commands. Both work identically.
+
 ## Add your API key
 
 Get your free API key from [Groq Console](https://console.groq.com/keys), then:

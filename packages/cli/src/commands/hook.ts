@@ -25,6 +25,9 @@ import(${JSON.stringify(pathToFileURL(hookPath))})
 export default command(
   {
     name: "hook",
+    help: {
+      description: "Install or uninstall Git commit message hook",
+    },
     parameters: ["<install/uninstall>"],
   },
   (argv) => {

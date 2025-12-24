@@ -6,6 +6,7 @@ import commitCommand from "~/commands/commit.js";
 import prCommand from "~/commands/pr.js";
 import issueCommand from "~/commands/issue.js";
 import configCommand from "~/commands/config.js";
+import modelCommand from "~/commands/model.js";
 import hookCommand, { isCalledFromGitHook } from "~/commands/hook.js";
 import setupCommand from "~/commands/setup.js";
 import prepareCommitMessageHook from "~/commands/prepare-commit-msg-hook.js";
@@ -26,7 +27,7 @@ if (isCalledFromGitHook) {
     {
       name: "dash",
       version,
-      commands: [commitCommand, prCommand, issueCommand, configCommand, hookCommand, setupCommand],
+      commands: [commitCommand, prCommand, issueCommand, configCommand, modelCommand, hookCommand, setupCommand],
       help: {
         description,
       },

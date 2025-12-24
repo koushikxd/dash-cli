@@ -41,15 +41,38 @@ dash config set GROQ_API_KEY=gsk_your_key_here
 
 Default: `openai/gpt-oss-20b`
 
-Which AI model to use. Options:
+Which AI model to use. You can change models using the dedicated `model` command or via config.
 
-- `openai/gpt-oss-20b` - Fast and cheap (default)
-- `llama-3.3-70b-versatile` - Best quality
-- `mixtral-8x7b-32768` - Good for large diffs
+**Using the model command (recommended):**
+
+```bash
+dash model
+```
+
+This opens an interactive prompt to select from popular models or enter a custom one. It also shows the Groq models documentation link.
+
+**Quick commands:**
+
+```bash
+dash model list
+dash model set llama-3.3-70b-versatile
+```
+
+**Using config:**
 
 ```bash
 dash config set model=llama-3.3-70b-versatile
 ```
+
+**Popular models:**
+
+- `llama-3.3-70b-versatile` - Best quality
+- `llama-3.1-8b-instant` - Fast responses
+- `mixtral-8x7b-32768` - Large context window (good for big diffs)
+- `gemma2-9b-it` - Google model
+- `openai/gpt-oss-20b` - Default
+
+Browse all available models at [console.groq.com/docs/models](https://console.groq.com/docs/models).
 
 ### generate
 

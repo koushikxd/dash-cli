@@ -14,6 +14,8 @@ Then run:
 dash setup
 ```
 
+> **Note:** If you have the system shell `dash` installed (common on Debian/Ubuntu), use `dash-cli` instead of `dash` for all commands.
+
 ## Requirements
 
 - **Node.js** 18+
@@ -42,12 +44,12 @@ dash pr
 dash commit [-g <n>] [-x <files>] [-a] [-t <type>]
 ```
 
-| Flag            | Description                          |
-| --------------- | ------------------------------------ |
-| `-g, --generate <n>` | Generate n messages (max: 5)   |
+| Flag                    | Description                  |
+| ----------------------- | ---------------------------- |
+| `-g, --generate <n>`    | Generate n messages (max: 5) |
 | `-x, --exclude <files>` | Exclude files                |
-| `-a, --all`     | Stage all tracked files              |
-| `-t, --type <type>` | Use `conventional` format        |
+| `-a, --all`             | Stage all tracked files      |
+| `-t, --type <type>`     | Use `conventional` format    |
 
 Examples:
 
@@ -64,27 +66,27 @@ dash commit --type conventional
 dash pr [create|list|view|merge] [flags]
 ```
 
-| Subcommand | Description       |
-| ---------- | ----------------- |
-| `create`   | Create/edit PR    |
-| `list`     | List open PRs     |
-| `view`     | View current PR   |
-| `merge`    | Merge current PR  |
+| Subcommand | Description      |
+| ---------- | ---------------- |
+| `create`   | Create/edit PR   |
+| `list`     | List open PRs    |
+| `view`     | View current PR  |
+| `merge`    | Merge current PR |
 
 **Create flags:**
 
-| Flag          | Description         |
-| ------------- | ------------------- |
-| `-b, --base <branch>` | Base branch |
-| `-d, --draft` | Create as draft     |
+| Flag                  | Description     |
+| --------------------- | --------------- |
+| `-b, --base <branch>` | Base branch     |
+| `-d, --draft`         | Create as draft |
 
 **Merge flags:**
 
-| Flag          | Description    |
-| ------------- | -------------- |
-| `-s, --squash` | Squash merge  |
-| `-m, --merge` | Merge commit   |
-| `-r, --rebase` | Rebase merge  |
+| Flag           | Description  |
+| -------------- | ------------ |
+| `-s, --squash` | Squash merge |
+| `-m, --merge`  | Merge commit |
+| `-r, --rebase` | Rebase merge |
 
 Examples:
 
@@ -101,10 +103,10 @@ dash pr merge --squash
 dash issue list [-s <state>] [-l <n>]
 ```
 
-| Flag             | Description                |
-| ---------------- | -------------------------- |
-| `-s, --state <state>` | open, closed, all   |
-| `-l, --limit <n>` | Max issues (default: 20) |
+| Flag                  | Description              |
+| --------------------- | ------------------------ |
+| `-s, --state <state>` | open, closed, all        |
+| `-l, --limit <n>`     | Max issues (default: 20) |
 
 Examples:
 
@@ -147,16 +149,16 @@ Checks dependencies and configures GitHub CLI integration.
 
 Config stored in `~/.dash`:
 
-| Option       | Default            | Description           |
-| ------------ | ------------------ | --------------------- |
-| `GROQ_API_KEY` | -                | API key (required)    |
-| `model`      | openai/gpt-oss-20b | AI model              |
-| `generate`   | 1                  | Commit suggestions    |
-| `type`       | -                  | Use `conventional`    |
-| `max-length` | 100                | Max message length    |
-| `locale`     | en                 | Message language      |
-| `timeout`    | 10000              | API timeout (ms)      |
-| `gh_enabled` | true               | Enable gh features    |
+| Option         | Default            | Description        |
+| -------------- | ------------------ | ------------------ |
+| `GROQ_API_KEY` | -                  | API key (required) |
+| `model`        | openai/gpt-oss-20b | AI model           |
+| `generate`     | 1                  | Commit suggestions |
+| `type`         | -                  | Use `conventional` |
+| `max-length`   | 100                | Max message length |
+| `locale`       | en                 | Message language   |
+| `timeout`      | 10000              | API timeout (ms)   |
+| `gh_enabled`   | true               | Enable gh features |
 
 ## Custom prompts
 
@@ -181,10 +183,10 @@ Each package can have its own prompts.
 
 ## Environment variables
 
-| Variable       | Description  |
-| -------------- | ------------ |
-| `GROQ_API_KEY` | API key      |
-| `HTTPS_PROXY`  | HTTP proxy   |
+| Variable       | Description |
+| -------------- | ----------- |
+| `GROQ_API_KEY` | API key     |
+| `HTTPS_PROXY`  | HTTP proxy  |
 
 ## GitHub CLI
 
@@ -199,6 +201,35 @@ Works without gh:
 - `dash hook`
 - `dash config`
 - `dash setup`
+
+## Troubleshooting
+
+### "dash" runs the system shell instead of the CLI
+
+Many Linux systems (Debian, Ubuntu, etc.) have `/usr/bin/dash` (the Debian Almquist Shell) installed. If your npm bin directory is lower in PATH priority, the system shell runs instead.
+
+**Solution:** Use `dash-cli` instead of `dash`:
+
+```bash
+dash-cli setup
+dash-cli commit
+dash-cli pr
+```
+
+Both `dash` and `dash-cli` are provided as binary names. Use whichever works on your system.
+
+**Alternative:** Fix your PATH to prioritize npm globals:
+
+```bash
+# Check where dash resolves to
+which dash
+
+# Check npm global bin location
+npm bin -g
+
+# Add npm bin to PATH (in .bashrc/.zshrc)
+export PATH="$(npm bin -g):$PATH"
+```
 
 ## Development
 

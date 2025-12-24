@@ -6,7 +6,9 @@ import { KnownError, handleCliError } from "~/errors.js";
 export default command(
   {
     name: "config",
-
+    help: {
+      description: "Get or set configuration options",
+    },
     parameters: ["<mode>", "<key=value...>"],
   },
   (argv) => {

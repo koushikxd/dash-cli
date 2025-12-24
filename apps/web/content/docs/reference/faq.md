@@ -7,6 +7,27 @@ Quick answers.
 
 ## Errors
 
+### "dash" runs the system shell instead of the CLI
+
+Many Linux systems (Debian, Ubuntu) have `/usr/bin/dash` (the Debian Almquist Shell) installed. If your npm bin directory is lower in PATH priority, the system shell runs instead.
+
+**Solution:** Use `dash-cli` instead:
+
+```bash
+dash-cli setup
+dash-cli commit
+dash-cli pr
+```
+
+Both `dash` and `dash-cli` are provided as binary names—use whichever works on your system.
+
+**Alternative:** Fix your PATH to prioritize npm globals:
+
+```bash
+# Add to your .bashrc or .zshrc
+export PATH="$(npm bin -g):$PATH"
+```
+
 ### "Please set your Groq API key"
 
 ```bash

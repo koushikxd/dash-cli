@@ -97,6 +97,34 @@ dash issue list --state all
 dash issue list --limit 10
 ```
 
+## Model selection
+
+Change the AI model used for generation.
+
+### Interactive selection
+
+```bash
+dash model
+```
+
+Opens a prompt to select from popular models or enter a custom one. Shows a link to [Groq's model docs](https://console.groq.com/docs/models) for reference.
+
+### List models
+
+```bash
+dash model list
+```
+
+Shows popular models with your current selection highlighted.
+
+### Set directly
+
+```bash
+dash model set llama-3.3-70b-versatile
+```
+
+Skip the prompt and set a model directly.
+
 ## Git hooks
 
 Auto-generate messages when you run `git commit`.
@@ -170,6 +198,7 @@ Dash handles big changes automatically. It summarizes stats and includes code sn
 dash commit [-g <n>] [-x <files>] [-a] [-t <type>]
 dash pr [create|list|view|merge] [-b <branch>] [-d]
 dash issue list [-s <state>] [-l <n>]
+dash model [list|set <model>]
 dash hook <install|uninstall>
 dash config <get|set> <key=value>
 dash setup
@@ -190,6 +219,10 @@ dash pr --draft --base develop
 dash pr merge --squash
 
 dash issue list --state all --limit 10
+
+dash model
+
+dash model set llama-3.3-70b-versatile
 
 dash hook install
 ```

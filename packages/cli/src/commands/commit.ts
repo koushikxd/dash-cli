@@ -266,6 +266,10 @@ const runCommit = async (
 export default command(
   {
     name: "commit",
+    alias: "c",
+    help: {
+      description: "Generate AI-powered commit messages from staged changes",
+    },
     flags: {
       generate: {
         type: Number,

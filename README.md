@@ -8,6 +8,8 @@ AI-powered Git CLI. Generate commit messages, create PRs, manage issues—all fr
 npm install -g @koushik_xd/dash
 ```
 
+> **Linux users:** If `dash` runs the system shell instead of this CLI, use `dash-cli` instead.
+
 ## Setup
 
 Get your free API key from [console.groq.com/keys](https://console.groq.com/keys):
@@ -65,6 +67,16 @@ dash issue list
 dash issue list --state all
 dash issue list --limit 10
 ```
+
+### Model
+
+```bash
+dash model
+dash model list
+dash model set llama-3.3-70b-versatile
+```
+
+Change AI models interactively or directly. See all models at [console.groq.com/docs/models](https://console.groq.com/docs/models).
 
 ### Git hook
 
