@@ -3,7 +3,7 @@ export const siteConfig = {
   description:
     "A CLI that writes your git commit messages for you with AI using Groq. Never write a commit message again.",
   creator: "@koushikxd",
-  url: "https://dash.vercel.app",
+  url: "https://dash-cli.vercel.app/",
   keywords: [
     "commit",
     "message",
@@ -20,5 +20,5 @@ export const siteConfig = {
       url: "https://github.com/koushikxd",
     },
   ],
-  ogImage: "https://dash.vercel.app/og.jpeg",
+  ogImage: "https://dash-cli.vercel.app/og.jpeg",
 };
