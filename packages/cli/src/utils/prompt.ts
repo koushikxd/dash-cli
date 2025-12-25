@@ -8,6 +8,7 @@ export interface PRContext {
   commits: Array<{ message: string; body: string }>;
   stats: { files: number; insertions: number; deletions: number };
   issue?: number;
+  diffSummary?: string;
 }
 
 const commitTypeFormats: Record<CommitType, string> = {
@@ -167,14 +168,47 @@ export const buildPRPrompt = (
     .map((c, i) => `${i + 1}. ${c.message}${c.body ? `\n   ${c.body}` : ""}`)
     .join("\n");
 
+  const knownTypes = new Set([
+    "feat",
+    "fix",
+    "docs",
+    "style",
+    "refactor",
+    "perf",
+    "test",
+    "build",
+    "ci",
+    "chore",
+    "revert",
+  ]);
+  const commitTypesFound = context.commits
+    .map((c) => {
+      const match = c.message.match(/^([a-z]+)(?:\([^)]+\))?:\s+/i);
+      const type = match?.[1]?.toLowerCase() || "";
+      return knownTypes.has(type) ? type : "other";
+    })
+    .reduce<Record<string, number>>((acc, t) => {
+      acc[t] = (acc[t] || 0) + 1;
+      return acc;
+    }, {});
+  const commitTypeSummary = Object.entries(commitTypesFound)
+    .sort((a, b) => b[1] - a[1])
+    .map(([t, n]) => `${t}: ${n}`)
+    .join(", ");
+
   const contextInfo = `BRANCH: ${context.branchName}
 BASE BRANCH: ${context.baseBranch}
 STATS: ${context.stats.files} files changed, +${context.stats.insertions} -${
     context.stats.deletions
   }
 ${context.issue ? `RELATED ISSUE: #${context.issue}\n` : ""}
+COMMIT TYPES: ${commitTypeSummary || "unknown"}
 COMMITS (${context.commits.length} total):
-${commitList}`;
+${commitList}${
+    context.diffSummary
+      ? `\n\nDIFF SUMMARY (top files):\n${context.diffSummary}`
+      : ""
+  }`;
 
   if (customPrompt) {
     return `${customPrompt}
@@ -199,47 +233,53 @@ REQUIREMENTS:
 1. Title: 
    - Use conventional commit format: type: description
    - Maximum 72 characters
-   - Be concise but descriptive
-   - Use the same commit type as the main change (feat, fix, refactor, etc.)
+   - Reflect the overall PR, not a single commit message
+   - Do not copy any commit message verbatim
+   - If changes span multiple types/areas, prefer a broad type like "chore" or "refactor"
+   - Otherwise pick the dominant type based on the overall changes
+   - Be specific about the major themes (e.g., tooling + UI), not generic
 
 2. Body: 
    - Use markdown formatting
    - ${isSimple ? "Keep it brief and focused" : "Be thorough and detailed"}
    - Structure with clear sections
-   - Include specific details about what changed and why
+   - Include specific details about what changed and why (use commit list + diff summary)
+   - Cover all major areas represented in the commit list (do not ignore later commits)
    ${context.issue ? `- Include "Closes #${context.issue}" at the end` : ""}
 
 BODY STRUCTURE:
 ## Summary
-<1-3 sentences explaining what this PR does and why it's needed>
+<1-3 sentences explaining the overall change set and why it matters>
 
 ## Changes
-- <List each significant change with specifics>
-- <Include component/file names where relevant>
-- <Be clear and descriptive>
+- Group by theme when multiple areas exist (e.g., Tooling, UI, Docs)
+- Use bullets with concrete details (what changed, where, and why)
+- Mention key files/components when clear from the diff summary
 ${context.issue ? "\n## Related Issues\nCloses #" + context.issue : ""}
 
 EXAMPLES OF GOOD PR DESCRIPTIONS:
 
-Example 1 (Bug Fix):
-TITLE: fix: resolve customer ID lookup in Stripe webhook
+Example 1 (Tooling / Maintenance):
+TITLE: chore: replace ESLint with Biome and refresh dependencies
 BODY:
 ## Summary
-Adds fallback support for \`dub_customer_id\` when processing Stripe webhook events. This ensures compatibility with libraries that normalize checkout session params to snake_case.
+Modernizes the development workflow by standardizing on Biome for linting/formatting and updating project dependencies for consistency and faster CI.
 
 ## Changes
-- Added \`dub_customer_id\` as fallback in checkout completion handler
-- Updated customer creation and update handlers with same fallback logic
-- Ensures reliable customer identification across all webhook events
+- Removed ESLint config and related packages
+- Added Biome configuration and updated scripts/tooling to use Biome
+- Updated dependency versions and lockfile to match the new setup
 
-Example 2 (Simple Fix):
-TITLE: fix: align pnpm version in package.json with README
+Example 2 (UI / Styling):
+TITLE: style: refresh docs viewer and sidebar layout
 BODY:
 ## Summary
-Fixes version mismatch between package.json and README.md for the recommended pnpm version.
+Improves readability and navigation by refining the docs viewer layout, sidebar styling, and related UI components.
 
 ## Changes
-- Updated \`packageManager\` field from \`pnpm@8.6.10\` to \`pnpm@9.15.9\`
+- Updated sidebar spacing, typography, and active states for clearer navigation
+- Refined docs viewer styles to improve content hierarchy and code block presentation
+- Polished related UI components to keep visuals consistent across the app
 
 FORMAT YOUR RESPONSE EXACTLY LIKE THIS:
 TITLE: <your title here>

@@ -26,7 +26,11 @@ const configParsers = {
         "Please set your Groq API key via `dash config set GROQ_API_KEY=<your token>`"
       );
     }
-    parseAssert("GROQ_API_KEY", key.startsWith("gsk_"), 'Must start with "gsk_"');
+    parseAssert(
+      "GROQ_API_KEY",
+      key.startsWith("gsk_"),
+      'Must start with "gsk_"'
+    );
 
     return key;
   },
@@ -185,4 +189,3 @@ export const setConfigs = async (keyValues: [key: string, value: string][]) => {
 
   await fs.writeFile(configPath, ini.stringify(config), "utf8");
 };
-

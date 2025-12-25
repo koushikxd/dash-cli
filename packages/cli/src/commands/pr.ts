@@ -1,13 +1,22 @@
 import { command } from "cleye";
 import { execa } from "execa";
 import { black, green, red, bgCyan, dim, cyan, yellow } from "kolorist";
-import { intro, outro, spinner, text, isCancel, confirm, select } from "@clack/prompts";
+import {
+  intro,
+  outro,
+  spinner,
+  text,
+  isCancel,
+  confirm,
+  select,
+} from "@clack/prompts";
 import {
   assertGitRepo,
   getCurrentBranch,
   getBaseBranch,
   getCommitsSinceBase,
   getDiffStatsSinceBase,
+  buildCompactSummarySinceBase,
   assertGhInstalled,
   assertNotOnBaseBranch,
   getExistingPR,
@@ -15,7 +24,11 @@ import {
   type ExistingPR,
 } from "~/utils/git.js";
 import { getConfig } from "~/utils/config.js";
-import { generatePRContent, generatePRUpdateContent, generateMergeCommitMessage } from "~/utils/groq.js";
+import {
+  generatePRContent,
+  generatePRUpdateContent,
+  generateMergeCommitMessage,
+} from "~/utils/groq.js";
 import { KnownError, handleCliError } from "~/errors.js";
 import { getPRPromptFile, type PRContext } from "~/utils/prompt.js";
 
@@ -60,13 +73,22 @@ const runPRCreate = async (
   if (!targetRepo) {
     s.start("Checking repository");
     const upstreamRepo = await getUpstreamRepo();
-    s.stop(upstreamRepo ? `Fork detected (upstream: ${upstreamRepo})` : "Repository checked");
+    s.stop(
+      upstreamRepo
+        ? `Fork detected (upstream: ${upstreamRepo})`
+        : "Repository checked"
+    );
 
     if (upstreamRepo) {
       const createUpstream = await select({
-        message: `This is a fork of ${cyan(upstreamRepo)}. Where should the PR be created?`,
+        message: `This is a fork of ${cyan(
+          upstreamRepo
+        )}. Where should the PR be created?`,
         options: [
-          { value: upstreamRepo, label: `Upstream repository (${upstreamRepo})` },
+          {
+            value: upstreamRepo,
+            label: `Upstream repository (${upstreamRepo})`,
+          },
           { value: "", label: "This fork (your repository)" },
           { value: "cancel", label: "Cancel" },
         ],
@@ -87,11 +109,17 @@ const runPRCreate = async (
   const currentBranch = await getCurrentBranch();
   const baseBranch = baseBranchOverride || (await getBaseBranch());
   await assertNotOnBaseBranch(currentBranch, baseBranch);
-  s.stop(`Branch: ${currentBranch} → ${baseBranch}${finalTargetRepo ? ` (${finalTargetRepo})` : ""}`);
+  s.stop(
+    `Branch: ${currentBranch} → ${baseBranch}${
+      finalTargetRepo ? ` (${finalTargetRepo})` : ""
+    }`
+  );
 
   s.start("Checking for existing PR");
   const existingPR = await getExistingPR();
-  s.stop(existingPR ? `Found existing PR #${existingPR.number}` : "No existing PR");
+  s.stop(
+    existingPR ? `Found existing PR #${existingPR.number}` : "No existing PR"
+  );
 
   if (existingPR) {
     console.log(`\n${cyan("Existing PR:")} #${existingPR.number}`);
@@ -100,7 +128,8 @@ const runPRCreate = async (
     console.log(`${dim("State:")} ${existingPR.state}\n`);
 
     const action = await select({
-      message: "A PR already exists for this branch. What would you like to do?",
+      message:
+        "A PR already exists for this branch. What would you like to do?",
       options: [
         { value: "edit", label: "Edit the existing PR with AI assistance" },
         { value: "view", label: "Open PR in browser" },
@@ -134,8 +163,12 @@ const handlePREdit = async (existingPR: ExistingPR, baseBranch: string) => {
 
   const editRequest = await text({
     message: "Describe what changes you want to make to the PR:",
-    placeholder: "e.g., Add more details about the API changes, update the title to be more descriptive",
-    validate: (value) => (value && value.trim().length > 0 ? undefined : "Please describe the changes"),
+    placeholder:
+      "e.g., Add more details about the API changes, update the title to be more descriptive",
+    validate: (value) =>
+      value && value.trim().length > 0
+        ? undefined
+        : "Please describe the changes",
   });
 
   if (isCancel(editRequest)) {
@@ -151,16 +184,19 @@ const handlePREdit = async (existingPR: ExistingPR, baseBranch: string) => {
   const { env } = process;
   const config = await getConfig({
     GROQ_API_KEY: env.GROQ_API_KEY,
-    proxy: env.https_proxy || env.HTTPS_PROXY || env.http_proxy || env.HTTP_PROXY,
+    proxy:
+      env.https_proxy || env.HTTPS_PROXY || env.http_proxy || env.HTTP_PROXY,
   });
 
   s.start("Generating updated PR content with AI");
   const customPrompt = await getPRPromptFile();
+  const diffSummary = await buildCompactSummarySinceBase(baseBranch);
   const context: PRContext = {
     branchName: currentBranch,
     baseBranch,
     commits: commits.map((c) => ({ message: c.message, body: c.body })),
     stats,
+    diffSummary: diffSummary || undefined,
   };
 
   let updatedContent;
@@ -184,7 +220,8 @@ const handlePREdit = async (existingPR: ExistingPR, baseBranch: string) => {
   const editedTitle = await text({
     message: "Updated PR Title:",
     initialValue: updatedContent.title,
-    validate: (value) => (value && value.trim().length > 0 ? undefined : "Title cannot be empty"),
+    validate: (value) =>
+      value && value.trim().length > 0 ? undefined : "Title cannot be empty",
   });
 
   if (isCancel(editedTitle)) {
@@ -216,7 +253,14 @@ const handlePREdit = async (existingPR: ExistingPR, baseBranch: string) => {
 
   s.start("Updating pull request");
   try {
-    await execa("gh", ["pr", "edit", "--title", finalTitle, "--body", finalBody]);
+    await execa("gh", [
+      "pr",
+      "edit",
+      "--title",
+      finalTitle,
+      "--body",
+      finalBody,
+    ]);
     s.stop("Pull request updated");
     outro(`${green("✔")} PR #${existingPR.number} updated: ${existingPR.url}`);
   } catch (error) {
@@ -258,17 +302,20 @@ const createNewPR = async (
   const { env } = process;
   const config = await getConfig({
     GROQ_API_KEY: env.GROQ_API_KEY,
-    proxy: env.https_proxy || env.HTTPS_PROXY || env.http_proxy || env.HTTP_PROXY,
+    proxy:
+      env.https_proxy || env.HTTPS_PROXY || env.http_proxy || env.HTTP_PROXY,
   });
 
   s.start("Generating PR content");
   const customPrompt = await getPRPromptFile();
+  const diffSummary = await buildCompactSummarySinceBase(baseBranch);
   const context: PRContext = {
     branchName: currentBranch,
     baseBranch,
     commits: commits.map((c) => ({ message: c.message, body: c.body })),
     stats,
     issue,
+    diffSummary: diffSummary || undefined,
   };
 
   let prContent;
@@ -286,9 +333,11 @@ const createNewPR = async (
     s.stop("Failed to generate PR content");
     const fallbackTitle = commits[0]?.message || `Merge ${currentBranch}`;
     const fallbackBody = commits.map((c) => `- ${c.message}`).join("\n");
-    prContent = { 
-      title: fallbackTitle, 
-      body: `## Changes\n\n${fallbackBody}${issue ? `\n\nCloses #${issue}` : ""}` 
+    prContent = {
+      title: fallbackTitle,
+      body: `## Changes\n\n${fallbackBody}${
+        issue ? `\n\nCloses #${issue}` : ""
+      }`,
     };
   }
   s.stop("PR content generated");
@@ -296,7 +345,8 @@ const createNewPR = async (
   const editedTitle = await text({
     message: "PR Title (edit or press Enter to use):",
     initialValue: prContent.title,
-    validate: (value) => (value && value.trim().length > 0 ? undefined : "Title cannot be empty"),
+    validate: (value) =>
+      value && value.trim().length > 0 ? undefined : "Title cannot be empty",
   });
 
   if (isCancel(editedTitle)) {
@@ -317,9 +367,13 @@ const createNewPR = async (
   const finalTitle = String(editedTitle).trim();
   const finalBody = String(editedBody || "").trim();
 
-  const targetDescription = targetRepo ? `${targetRepo}:${baseBranch}` : baseBranch;
+  const targetDescription = targetRepo
+    ? `${targetRepo}:${baseBranch}`
+    : baseBranch;
   const proceed = await confirm({
-    message: `Create ${isDraft ? "draft " : ""}PR "${finalTitle}" targeting ${targetDescription}?`,
+    message: `Create ${
+      isDraft ? "draft " : ""
+    }PR "${finalTitle}" targeting ${targetDescription}?`,
   });
 
   if (!proceed || isCancel(proceed)) {
@@ -329,7 +383,16 @@ const createNewPR = async (
 
   s.start("Creating pull request");
   try {
-    const args = ["pr", "create", "--title", finalTitle, "--body", finalBody, "--base", baseBranch];
+    const args = [
+      "pr",
+      "create",
+      "--title",
+      finalTitle,
+      "--body",
+      finalBody,
+      "--base",
+      baseBranch,
+    ];
 
     if (isDraft) {
       args.push("--draft");
@@ -401,11 +464,17 @@ const runPRList = async () => {
       const date = new Date(pr.updatedAt);
       const relativeTime = getRelativeTime(date);
       console.log(`${green(`#${pr.number}`)} ${pr.title}`);
-      console.log(`   ${dim(`${pr.headRefName} by ${pr.author.login} • ${relativeTime}`)}`);
+      console.log(
+        `   ${dim(`${pr.headRefName} by ${pr.author.login} • ${relativeTime}`)}`
+      );
       console.log(`   ${dim(pr.url)}\n`);
     }
 
-    outro(`${dim("Use")} dash pr view ${dim("to see details of current branch's PR")}`);
+    outro(
+      `${dim("Use")} dash pr view ${dim(
+        "to see details of current branch's PR"
+      )}`
+    );
   } catch (error) {
     s.stop("Failed to fetch PRs");
     if (error instanceof Error) {
@@ -439,15 +508,29 @@ const runPRView = async () => {
     console.log(`${cyan("Title:")} ${pr.title}`);
     console.log(`${cyan("Author:")} ${pr.author.login}`);
     console.log(`${cyan("Branch:")} ${pr.headRefName} → ${pr.baseRefName}`);
-    console.log(`${cyan("State:")} ${pr.state === "OPEN" ? green(pr.state) : yellow(pr.state)}`);
-    console.log(`${cyan("Changes:")} ${green(`+${pr.additions}`)} ${red(`-${pr.deletions}`)}`);
-    console.log(`${cyan("Mergeable:")} ${pr.mergeable === "MERGEABLE" ? green("Yes") : yellow(pr.mergeable)}`);
+    console.log(
+      `${cyan("State:")} ${
+        pr.state === "OPEN" ? green(pr.state) : yellow(pr.state)
+      }`
+    );
+    console.log(
+      `${cyan("Changes:")} ${green(`+${pr.additions}`)} ${red(
+        `-${pr.deletions}`
+      )}`
+    );
+    console.log(
+      `${cyan("Mergeable:")} ${
+        pr.mergeable === "MERGEABLE" ? green("Yes") : yellow(pr.mergeable)
+      }`
+    );
     console.log(`${cyan("URL:")} ${pr.url}`);
 
     if (pr.body) {
       console.log(`\n${cyan("Description:")}`);
       console.log(dim("─".repeat(50)));
-      console.log(pr.body.slice(0, 500) + (pr.body.length > 500 ? "\n..." : ""));
+      console.log(
+        pr.body.slice(0, 500) + (pr.body.length > 500 ? "\n..." : "")
+      );
       console.log(dim("─".repeat(50)));
     }
 
@@ -499,14 +582,16 @@ const runPRMerge = async (mergeMethod?: string) => {
     }
   }
 
-  const method = mergeMethod || (await select({
-    message: "Select merge method:",
-    options: [
-      { value: "squash", label: "Squash and merge (recommended)" },
-      { value: "merge", label: "Create a merge commit" },
-      { value: "rebase", label: "Rebase and merge" },
-    ],
-  }));
+  const method =
+    mergeMethod ||
+    (await select({
+      message: "Select merge method:",
+      options: [
+        { value: "squash", label: "Squash and merge (recommended)" },
+        { value: "merge", label: "Create a merge commit" },
+        { value: "rebase", label: "Rebase and merge" },
+      ],
+    }));
 
   if (isCancel(method)) {
     outro("Merge cancelled");
@@ -516,7 +601,8 @@ const runPRMerge = async (mergeMethod?: string) => {
   const { env } = process;
   const config = await getConfig({
     GROQ_API_KEY: env.GROQ_API_KEY,
-    proxy: env.https_proxy || env.HTTPS_PROXY || env.http_proxy || env.HTTP_PROXY,
+    proxy:
+      env.https_proxy || env.HTTPS_PROXY || env.http_proxy || env.HTTP_PROXY,
   });
 
   s.start("Generating merge commit message");
@@ -538,7 +624,8 @@ const runPRMerge = async (mergeMethod?: string) => {
   const editedMessage = await text({
     message: "Merge commit message:",
     initialValue: mergeMessage,
-    validate: (value) => (value && value.trim().length > 0 ? undefined : "Message cannot be empty"),
+    validate: (value) =>
+      value && value.trim().length > 0 ? undefined : "Message cannot be empty",
   });
 
   if (isCancel(editedMessage)) {
@@ -559,7 +646,14 @@ const runPRMerge = async (mergeMethod?: string) => {
 
   s.start("Merging pull request");
   try {
-    const args = ["pr", "merge", `--${method}`, "--subject", finalMessage, "--delete-branch"];
+    const args = [
+      "pr",
+      "merge",
+      `--${method}`,
+      "--subject",
+      finalMessage,
+      "--delete-branch",
+    ];
     await execa("gh", args);
     s.stop("Pull request merged");
     outro(`${green("✔")} PR #${pr.number} merged successfully`);
@@ -632,7 +726,8 @@ export default command(
       },
     },
     help: {
-      description: "Create, list, view, or merge pull requests with AI assistance",
+      description:
+        "Create, list, view, or merge pull requests with AI assistance",
       examples: [
         "dash pr",
         "dash pr create",

@@ -301,8 +301,10 @@ export const generatePRContent = async (
 
   if (!parsed.title) {
     const fallbackTitle =
-      context.commits[0]?.message || `Merge ${context.branchName}`;
-    parsed.title = fallbackTitle.slice(0, 72);
+      context.commits.length > 1
+        ? `chore: update ${context.branchName.replace(/[-/]+/g, " ")}`
+        : context.commits[0]?.message || `Merge ${context.branchName}`;
+    parsed.title = fallbackTitle.trim().slice(0, 72);
   }
 
   if (!parsed.body) {
@@ -354,7 +356,9 @@ ${editRequest}
 LATEST COMMITS:
 ${context.commits.map((c, i) => `${i + 1}. ${c.message}`).join("\n")}
 
-STATS: ${context.stats.files} files changed, +${context.stats.insertions} -${context.stats.deletions}
+STATS: ${context.stats.files} files changed, +${context.stats.insertions} -${
+    context.stats.deletions
+  }
 
 Generate an updated PR title and description that incorporates the user's requested changes.
 

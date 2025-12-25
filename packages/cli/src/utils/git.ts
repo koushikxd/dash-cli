@@ -129,10 +129,7 @@ export const getDiffSummary = async (excludeFiles?: string[]) => {
           "--",
           file,
         ]);
-        const [additions, deletions] = stat
-          .split("\t")
-          .slice(0, 2)
-          .map(Number);
+        const [additions, deletions] = stat.split("\t").slice(0, 2).map(Number);
         return {
           file,
           additions: additions || 0,
@@ -292,8 +289,7 @@ export const assertGhInstalled = async (): Promise<void> => {
   const ghEnabled = await isGhEnabled();
   if (!ghEnabled) {
     throw new KnownError(
-      "GitHub CLI features are disabled.\n" +
-        "Run `dash setup` to enable them."
+      "GitHub CLI features are disabled.\n" + "Run `dash setup` to enable them."
     );
   }
 
@@ -372,6 +368,87 @@ export const getDiffStatsSinceBase = async (
   }
 };
 
+export const buildCompactSummarySinceBase = async (
+  baseBranch: string,
+  excludeFiles?: string[],
+  maxFiles: number = 20
+) => {
+  const { stdout: remotes } = await execa("git", ["remote"]);
+  const remote = remotes.split("\n")[0]?.trim() || "origin";
+
+  try {
+    const { stdout: files } = await execa("git", [
+      "diff",
+      "--name-only",
+      `${remote}/${baseBranch}...HEAD`,
+      "--",
+      ".",
+      ...filesToExclude,
+      ...(excludeFiles ? excludeFiles.map(excludeFromDiff) : []),
+    ]);
+
+    const fileList = files
+      .split("\n")
+      .map((f) => f.trim())
+      .filter(Boolean);
+    if (fileList.length === 0) return null;
+
+    const fileStats = await Promise.all(
+      fileList.map(async (file) => {
+        try {
+          const { stdout: stat } = await execa("git", [
+            "diff",
+            "--numstat",
+            `${remote}/${baseBranch}...HEAD`,
+            "--",
+            file,
+          ]);
+          const [additions, deletions] = stat
+            .split("\t")
+            .slice(0, 2)
+            .map(Number);
+          return {
+            file,
+            additions: additions || 0,
+            deletions: deletions || 0,
+            changes: (additions || 0) + (deletions || 0),
+          };
+        } catch {
+          return { file, additions: 0, deletions: 0, changes: 0 };
+        }
+      })
+    );
+
+    const sorted = [...fileStats].sort((a, b) => b.changes - a.changes);
+    const top = sorted.slice(0, Math.max(1, maxFiles));
+    const totalAdditions = fileStats.reduce(
+      (s, f) => s + (f.additions || 0),
+      0
+    );
+    const totalDeletions = fileStats.reduce(
+      (s, f) => s + (f.deletions || 0),
+      0
+    );
+
+    const lines: string[] = [];
+    lines.push(`Files changed: ${fileList.length}`);
+    lines.push(`Additions: ${totalAdditions}, Deletions: ${totalDeletions}`);
+    lines.push("Top files by changes:");
+    for (const f of top) {
+      lines.push(
+        `- ${f.file} (+${f.additions} / -${f.deletions}, ${f.changes} changes)`
+      );
+    }
+    if (sorted.length > top.length) {
+      lines.push(`…and ${sorted.length - top.length} more files`);
+    }
+
+    return lines.join("\n");
+  } catch {
+    return null;
+  }
+};
+
 export interface RepoInfo {
   owner: string;
   name: string;
@@ -418,4 +495,3 @@ export const getUpstreamRepo = async (): Promise<string | null> => {
   }
   return null;
 };
-
