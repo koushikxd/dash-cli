@@ -11,6 +11,7 @@ import {
   assertGhInstalled,
   assertNotOnBaseBranch,
   getExistingPR,
+  getUpstreamRepo,
   type ExistingPR,
 } from "~/utils/git.js";
 import { getConfig } from "~/utils/config.js";
@@ -41,7 +42,12 @@ interface PRViewData {
   mergeable: string;
 }
 
-const runPRCreate = async (baseBranchOverride?: string, isDraft?: boolean) => {
+const runPRCreate = async (
+  baseBranchOverride?: string,
+  isDraft?: boolean,
+  issue?: number,
+  targetRepo?: string
+) => {
   intro(bgCyan(black(" dash pr create ")));
 
   await assertGitRepo();
@@ -49,11 +55,39 @@ const runPRCreate = async (baseBranchOverride?: string, isDraft?: boolean) => {
 
   const s = spinner();
 
+  let finalTargetRepo = targetRepo;
+
+  if (!targetRepo) {
+    s.start("Checking repository");
+    const upstreamRepo = await getUpstreamRepo();
+    s.stop(upstreamRepo ? `Fork detected (upstream: ${upstreamRepo})` : "Repository checked");
+
+    if (upstreamRepo) {
+      const createUpstream = await select({
+        message: `This is a fork of ${cyan(upstreamRepo)}. Where should the PR be created?`,
+        options: [
+          { value: upstreamRepo, label: `Upstream repository (${upstreamRepo})` },
+          { value: "", label: "This fork (your repository)" },
+          { value: "cancel", label: "Cancel" },
+        ],
+      });
+
+      if (isCancel(createUpstream) || createUpstream === "cancel") {
+        outro("Operation cancelled");
+        return;
+      }
+
+      if (createUpstream) {
+        finalTargetRepo = createUpstream as string;
+      }
+    }
+  }
+
   s.start("Gathering branch information");
   const currentBranch = await getCurrentBranch();
   const baseBranch = baseBranchOverride || (await getBaseBranch());
   await assertNotOnBaseBranch(currentBranch, baseBranch);
-  s.stop(`Branch: ${currentBranch} → ${baseBranch}`);
+  s.stop(`Branch: ${currentBranch} → ${baseBranch}${finalTargetRepo ? ` (${finalTargetRepo})` : ""}`);
 
   s.start("Checking for existing PR");
   const existingPR = await getExistingPR();
@@ -91,7 +125,7 @@ const runPRCreate = async (baseBranchOverride?: string, isDraft?: boolean) => {
     }
   }
 
-  await createNewPR(baseBranch, currentBranch, isDraft);
+  await createNewPR(baseBranch, currentBranch, isDraft, issue, finalTargetRepo);
 };
 
 const handlePREdit = async (existingPR: ExistingPR, baseBranch: string) => {
@@ -194,7 +228,13 @@ const handlePREdit = async (existingPR: ExistingPR, baseBranch: string) => {
   }
 };
 
-const createNewPR = async (baseBranch: string, currentBranch: string, isDraft?: boolean) => {
+const createNewPR = async (
+  baseBranch: string,
+  currentBranch: string,
+  isDraft?: boolean,
+  issue?: number,
+  targetRepo?: string
+) => {
   const s = spinner();
 
   s.start("Fetching commits");
@@ -212,7 +252,7 @@ const createNewPR = async (baseBranch: string, currentBranch: string, isDraft?: 
   s.stop(
     `Found ${commits.length} commit${commits.length > 1 ? "s" : ""} ${dim(
       `(${stats.files} files, +${stats.insertions} -${stats.deletions})`
-    )}`
+    )}${issue ? ` ${dim(`(relates to #${issue})`)}` : ""}`
   );
 
   const { env } = process;
@@ -228,6 +268,7 @@ const createNewPR = async (baseBranch: string, currentBranch: string, isDraft?: 
     baseBranch,
     commits: commits.map((c) => ({ message: c.message, body: c.body })),
     stats,
+    issue,
   };
 
   let prContent;
@@ -238,13 +279,17 @@ const createNewPR = async (baseBranch: string, currentBranch: string, isDraft?: 
       context,
       config.timeout,
       config.proxy,
-      customPrompt
+      customPrompt,
+      issue
     );
   } catch {
     s.stop("Failed to generate PR content");
     const fallbackTitle = commits[0]?.message || `Merge ${currentBranch}`;
     const fallbackBody = commits.map((c) => `- ${c.message}`).join("\n");
-    prContent = { title: fallbackTitle, body: `## Changes\n\n${fallbackBody}` };
+    prContent = { 
+      title: fallbackTitle, 
+      body: `## Changes\n\n${fallbackBody}${issue ? `\n\nCloses #${issue}` : ""}` 
+    };
   }
   s.stop("PR content generated");
 
@@ -272,8 +317,9 @@ const createNewPR = async (baseBranch: string, currentBranch: string, isDraft?: 
   const finalTitle = String(editedTitle).trim();
   const finalBody = String(editedBody || "").trim();
 
+  const targetDescription = targetRepo ? `${targetRepo}:${baseBranch}` : baseBranch;
   const proceed = await confirm({
-    message: `Create ${isDraft ? "draft " : ""}PR "${finalTitle}" targeting ${baseBranch}?`,
+    message: `Create ${isDraft ? "draft " : ""}PR "${finalTitle}" targeting ${targetDescription}?`,
   });
 
   if (!proceed || isCancel(proceed)) {
@@ -289,11 +335,31 @@ const createNewPR = async (baseBranch: string, currentBranch: string, isDraft?: 
       args.push("--draft");
     }
 
+    if (targetRepo) {
+      args.push("--repo", targetRepo);
+    }
+
     const { stdout } = await execa("gh", args);
     s.stop("Pull request created");
 
     const prUrl = stdout.trim();
-    outro(`${green("✔")} PR created: ${prUrl}`);
+    console.log(`\n${green("✔")} PR created: ${cyan(prUrl)}\n`);
+
+    const openInBrowser = await confirm({
+      message: "Open PR in browser?",
+      initialValue: true,
+    });
+
+    if (openInBrowser && !isCancel(openInBrowser)) {
+      const viewArgs = ["pr", "view", "--web"];
+      if (targetRepo) {
+        viewArgs.push("--repo", targetRepo);
+      }
+      await execa("gh", viewArgs);
+      outro(`${green("✔")} Opened in browser`);
+    } else {
+      outro(`${green("✔")} Done`);
+    }
   } catch (error) {
     s.stop("Failed to create PR");
     if (error instanceof Error) {
@@ -536,6 +602,16 @@ export default command(
         alias: "d",
         default: false,
       },
+      issue: {
+        type: Number,
+        description: "Related issue number (adds 'Closes #X' to PR)",
+        alias: "i",
+      },
+      repo: {
+        type: String,
+        description: "Target repository for fork PRs (e.g., owner/repo)",
+        alias: "R",
+      },
       squash: {
         type: Boolean,
         description: "Use squash merge (for merge subcommand)",
@@ -561,6 +637,9 @@ export default command(
         "dash pr",
         "dash pr create",
         "dash pr create --draft",
+        "dash pr create --issue 123",
+        "dash pr create --repo owner/repo",
+        "dash pr create --issue 42 --repo upstream/project",
         "dash pr list",
         "dash pr view",
         "dash pr merge",
@@ -590,7 +669,12 @@ export default command(
       }
       case "create":
       case undefined:
-        handler = runPRCreate(argv.flags.base, argv.flags.draft);
+        handler = runPRCreate(
+          argv.flags.base,
+          argv.flags.draft,
+          argv.flags.issue,
+          argv.flags.repo
+        );
         break;
       default:
         console.error(`${red("✖")} Unknown subcommand: ${subcommand}`);

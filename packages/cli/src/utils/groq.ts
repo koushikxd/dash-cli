@@ -274,20 +274,23 @@ export const generatePRContent = async (
   context: PRContext,
   timeout: number,
   proxy?: string,
-  customPrompt?: string | null
+  customPrompt?: string | null,
+  issue?: number
 ): Promise<PRContent> => {
+  const contextWithIssue = { ...context, issue };
+
   const completion = await createChatCompletion(
     apiKey,
     model,
     [
       { role: "system", content: generatePRSystemPrompt(customPrompt) },
-      { role: "user", content: buildPRPrompt(context, customPrompt) },
+      { role: "user", content: buildPRPrompt(contextWithIssue, customPrompt) },
     ],
     0.4,
     1,
     0,
     0,
-    1500,
+    2000,
     1,
     timeout,
     proxy
@@ -308,6 +311,10 @@ export const generatePRContent = async (
       .map((c) => `- ${c.message}`)
       .join("\n");
     parsed.body = `## Changes\n\n${commitSummary}`;
+  }
+
+  if (issue && !parsed.body.includes(`#${issue}`)) {
+    parsed.body += `\n\nCloses #${issue}`;
   }
 
   return parsed;

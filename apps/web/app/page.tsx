@@ -52,7 +52,7 @@ export default function Page() {
             className="flex flex-col items-center gap-6"
           >
             <div className="flex w-full items-center justify-between text-xs font-medium tracking-wider uppercase">
-              <span className="text-muted-foreground">v1.4.1 is out!</span>
+              <span className="text-muted-foreground">v1.4.2 is out!</span>
               <div className="text-muted-foreground flex items-center gap-4">
                 <React.Suspense fallback={<NpmDownloads />}>
                   <NpmDownloads />

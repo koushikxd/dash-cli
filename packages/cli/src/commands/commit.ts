@@ -20,33 +20,38 @@ const buildDiffSnippets = async (
   totalMaxChars: number = 4000
 ): Promise<string> => {
   try {
-    const targetFiles = files.slice(0, 5);
+    const targetFiles = files.slice(0, 6);
     const parts: string[] = [];
     let remaining = totalMaxChars;
+
     for (const f of targetFiles) {
       const { stdout } = await execa("git", [
         "diff",
         "--cached",
-        "--unified=0",
+        "--unified=1",
         "--",
         f,
       ]);
       if (!stdout) continue;
+
       const lines = stdout.split("\n").filter(Boolean);
       const picked: string[] = [];
       let count = 0;
+
       for (const line of lines) {
         const isHunk = line.startsWith("@@");
         const isChange =
           (line.startsWith("+") || line.startsWith("-")) &&
           !line.startsWith("+++") &&
           !line.startsWith("---");
+
         if (isHunk || isChange) {
           picked.push(line);
           count++;
           if (count >= perFileMaxLines) break;
         }
       }
+
       if (picked.length > 0) {
         const block = [`# ${f}`, ...picked].join("\n");
         if (block.length <= remaining) {
@@ -59,8 +64,12 @@ const buildDiffSnippets = async (
       }
       if (remaining <= 0) break;
     }
+
     if (parts.length === 0) return "";
-    return ["Context snippets (truncated):", ...parts].join("\n");
+    return [
+      "Code changes (use this to write the commit message):",
+      ...parts,
+    ].join("\n\n");
   } catch {
     return "";
   }
@@ -72,7 +81,7 @@ export const buildSingleCommitPrompt = async (
   maxLength: number,
   customPrompt?: string | null
 ): Promise<string> => {
-  const snippets = await buildDiffSnippets(files, 30, 3000);
+  const snippets = await buildDiffSnippets(files, 30, 3500);
 
   if (customPrompt) {
     return `${customPrompt}
@@ -80,7 +89,7 @@ export const buildSingleCommitPrompt = async (
 CHANGES SUMMARY:
 ${compactSummary}
 
-${snippets ? `\nCODE CONTEXT:\n${snippets}\n` : ""}
+${snippets ? `\n${snippets}\n` : ""}
 
 Maximum ${maxLength} characters. Return only the commit message line, no explanations.`;
   }
@@ -90,37 +99,44 @@ Maximum ${maxLength} characters. Return only the commit message line, no explana
 CHANGES SUMMARY:
 ${compactSummary}
 
-${snippets ? `\nCODE CONTEXT:\n${snippets}\n` : ""}
+${snippets ? `\n${snippets}\n` : ""}
 
-TASK: Write ONE conventional commit message that accurately describes what was changed.
+CRITICAL - READ CAREFULLY:
+- Base your message ONLY on what is explicitly shown in the changes above
+- DO NOT infer features that aren't directly visible in the code
+- If you see className/CSS changes, say "style" or "update UI", NOT "add feature"
+- File names can be misleading - focus on the ACTUAL code changes shown
+- When uncertain, use conservative terms like "update" or "improve"
+
+TASK: Write ONE conventional commit message describing ONLY what the diff shows.
 
 REQUIREMENTS:
 - Format: type: subject (NO scope, just type and subject)
 - Maximum ${maxLength} characters
-- Be specific and descriptive
-- Use imperative mood, present tense
-- Include the main component/area affected
+- Describe the actual code change, not assumed functionality
+- Use imperative mood, present tense ("add" not "added")
+- Include the main component/area affected when clear
 - Complete the message - never truncate mid-sentence
 
-COMMIT TYPE GUIDELINES:
-- feat: NEW user-facing features only
-- refactor: code improvements, restructuring, internal changes
-- fix: bug fixes that resolve issues
+COMMIT TYPE SELECTION:
+- feat: ONLY for genuinely NEW user-facing features (new components, new API endpoints, new functionality)
+- style: UI changes, CSS modifications, styling updates, className changes
+- refactor: code improvements, restructuring, internal changes without new functionality
+- fix: bug fixes that resolve issues or errors
 - docs: documentation changes only
-- chore: config updates, maintenance, dependencies
+- test: adding or updating tests
+- chore: config updates, maintenance, dependency updates
 
-EXAMPLES (correct format - NO scope, just type and subject):
-- feat: add user login with OAuth integration
-- fix: resolve memory leak in image processing service
-- refactor: improve message generation with better prompts
-- refactor: increase default max-length from 50 to 100
-- docs: update installation and configuration guide
-- test: add unit tests for JWT token validation
-- chore: update axios to v1.6.0 for security patches
+CORRECT EXAMPLES:
+- style: update sidebar styling and add mode toggle
+- refactor: simplify form validation logic
+- fix: handle null case in user lookup
+- feat: add OAuth authentication to login
+- chore: update package dependencies
 
-WRONG FORMAT (do not use):
-- feat(auth): add user login
-- refactor(commit): improve prompts
+WRONG EXAMPLES (hallucinating features not in diff):
+- "feat: add collapsible sidebar" when diff only shows CSS
+- "feat: implement new dashboard" when diff shows layout tweaks
 
 Return only the commit message line, no explanations.`;
 };
@@ -310,4 +326,3 @@ export default command(
     });
   }
 );
-

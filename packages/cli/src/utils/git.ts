@@ -372,3 +372,50 @@ export const getDiffStatsSinceBase = async (
   }
 };
 
+export interface RepoInfo {
+  owner: string;
+  name: string;
+  fullName: string;
+  isFork: boolean;
+  parent?: {
+    owner: string;
+    name: string;
+    fullName: string;
+  };
+}
+
+export const getRepoInfo = async (): Promise<RepoInfo | null> => {
+  try {
+    const { stdout } = await execa("gh", [
+      "repo",
+      "view",
+      "--json",
+      "owner,name,isFork,parent",
+    ]);
+    const data = JSON.parse(stdout);
+    return {
+      owner: data.owner?.login || "",
+      name: data.name || "",
+      fullName: `${data.owner?.login}/${data.name}`,
+      isFork: data.isFork || false,
+      parent: data.parent
+        ? {
+            owner: data.parent.owner?.login || "",
+            name: data.parent.name || "",
+            fullName: `${data.parent.owner?.login}/${data.parent.name}`,
+          }
+        : undefined,
+    };
+  } catch {
+    return null;
+  }
+};
+
+export const getUpstreamRepo = async (): Promise<string | null> => {
+  const repoInfo = await getRepoInfo();
+  if (repoInfo?.isFork && repoInfo.parent) {
+    return repoInfo.parent.fullName;
+  }
+  return null;
+};
+

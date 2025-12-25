@@ -7,6 +7,7 @@ export interface PRContext {
   baseBranch: string;
   commits: Array<{ message: string; body: string }>;
   stats: { files: number; insertions: number; deletions: number };
+  issue?: number;
 }
 
 const commitTypeFormats: Record<CommitType, string> = {
@@ -62,12 +63,21 @@ CRITICAL RULES:
 - NO explanations, questions, or meta-commentary
 - ALWAYS complete the message - never truncate mid-sentence
 
-COMMIT TYPES:
-- feat: NEW user-facing feature or functionality
-- fix: bug fix that resolves an issue
+ACCURACY RULES (VERY IMPORTANT):
+- Describe ONLY what is explicitly shown in the provided diff/changes
+- DO NOT infer, assume, or imagine features not directly visible in the code
+- DO NOT base commit messages solely on file names - read the actual changes
+- If you see CSS/styling changes, say "style" or "update styling", NOT "add feature"
+- If you see className/UI changes without new functionality, it's "style" NOT "feat"
+- When uncertain about the scope, use more general terms ("update", "improve") rather than specific features
+- Focus on what the code actually does, not what you think it might enable
+
+COMMIT TYPES (use the right one):
+- feat: NEW user-facing feature or functionality (new components, new APIs, new capabilities)
+- fix: bug fix that resolves an issue or error
 - docs: documentation changes only
-- style: formatting, no logic change
-- refactor: code restructuring, improvements, or internal changes
+- style: formatting, CSS/UI changes, white-space (no logic change)
+- refactor: code restructuring, improvements without changing behavior
 - perf: performance improvements
 - test: adding/updating tests
 - build: build system changes
@@ -76,30 +86,34 @@ COMMIT TYPES:
 
 QUALITY GUIDELINES:
 - Start with the most important change
-- Use specific, descriptive language
-- Include the main component/area affected
+- Use specific, descriptive language based on actual code changes
+- Include the main component/area affected when clear
 - Be clear about what was done, not just what files changed
 - Use proper grammar and punctuation
+- Be conservative - it's better to be slightly vague than wrong
 
-EXAMPLES (correct format - NO scope, just type and subject):
+CORRECT EXAMPLES (NO scope, just type and subject):
 - feat: add user login with OAuth integration
 - fix: resolve memory leak in image processing service
 - refactor: improve message generation with better prompts
-- refactor: increase default max-length from 50 to 100
+- style: update sidebar styling and add mode toggle
 - docs: update installation and configuration guide
 - test: add unit tests for JWT token validation
 - chore: update axios to v1.6.0 for security patches
 
-WRONG FORMAT (do not use):
-- feat(auth): add user login
-- refactor(commit): improve prompts
+WRONG EXAMPLES (these are hallucinations - don't do this):
+- "feat: add collapsible sidebar" when diff only shows CSS changes
+- "feat: implement dark mode" when diff only adds a toggle button
+- "feat: add new dashboard" when diff only adjusts layouts
+- feat(auth): add user login  [wrong: has scope]
+- refactor(commit): improve prompts  [wrong: has scope]
 
 ${commitTypes[type] ? `\nDETAILED TYPE GUIDELINES:\n${commitTypes[type]}` : ""}
 
 Language: ${locale}
 Output format: ${commitTypeFormats[type] || "type: subject"}
 
-Generate a single, complete, professional commit message that accurately describes the changes.`;
+Generate a single, complete, professional commit message that accurately describes ONLY what is shown in the provided changes.`;
 
   return basePrompt;
 };
@@ -139,10 +153,10 @@ export const generatePRSystemPrompt = (
     return `You are a professional developer writing pull request descriptions. Follow the user's guidelines.`;
   }
 
-  return `You are a professional developer writing pull request descriptions.
+  return `You are a professional developer writing pull request descriptions for open source projects.
 Write clear, concise, and informative PR titles and descriptions.
-Focus on WHAT changed and WHY, not HOW.
-Use markdown formatting for the body.`;
+Focus on WHAT changed, WHY it was changed, and provide helpful context for reviewers.
+Use proper markdown formatting for the body.`;
 };
 
 export const buildPRPrompt = (
@@ -155,8 +169,10 @@ export const buildPRPrompt = (
 
   const contextInfo = `BRANCH: ${context.branchName}
 BASE BRANCH: ${context.baseBranch}
-STATS: ${context.stats.files} files changed, +${context.stats.insertions} -${context.stats.deletions}
-
+STATS: ${context.stats.files} files changed, +${context.stats.insertions} -${
+    context.stats.deletions
+  }
+${context.issue ? `RELATED ISSUE: #${context.issue}\n` : ""}
 COMMITS (${context.commits.length} total):
 ${commitList}`;
 
@@ -173,21 +189,62 @@ BODY:
 Do not include any other text or explanations.`;
   }
 
+  const isSimple = context.commits.length <= 2 && context.stats.files <= 3;
+
   return `Generate a pull request title and description based on the following context.
 
 ${contextInfo}
 
 REQUIREMENTS:
-1. Title: Concise, descriptive summary (max 72 chars). Use conventional commit style if commits follow it.
-2. Body: Markdown formatted with:
-   - Brief summary of changes (1-2 sentences)
-   - List of key changes (bullet points)
-   - Any breaking changes or important notes if applicable
+1. Title: 
+   - Use conventional commit format: type: description
+   - Maximum 72 characters
+   - Be concise but descriptive
+   - Use the same commit type as the main change (feat, fix, refactor, etc.)
+
+2. Body: 
+   - Use markdown formatting
+   - ${isSimple ? "Keep it brief and focused" : "Be thorough and detailed"}
+   - Structure with clear sections
+   - Include specific details about what changed and why
+   ${context.issue ? `- Include "Closes #${context.issue}" at the end` : ""}
+
+BODY STRUCTURE:
+## Summary
+<1-3 sentences explaining what this PR does and why it's needed>
+
+## Changes
+- <List each significant change with specifics>
+- <Include component/file names where relevant>
+- <Be clear and descriptive>
+${context.issue ? "\n## Related Issues\nCloses #" + context.issue : ""}
+
+EXAMPLES OF GOOD PR DESCRIPTIONS:
+
+Example 1 (Bug Fix):
+TITLE: fix: resolve customer ID lookup in Stripe webhook
+BODY:
+## Summary
+Adds fallback support for \`dub_customer_id\` when processing Stripe webhook events. This ensures compatibility with libraries that normalize checkout session params to snake_case.
+
+## Changes
+- Added \`dub_customer_id\` as fallback in checkout completion handler
+- Updated customer creation and update handlers with same fallback logic
+- Ensures reliable customer identification across all webhook events
+
+Example 2 (Simple Fix):
+TITLE: fix: align pnpm version in package.json with README
+BODY:
+## Summary
+Fixes version mismatch between package.json and README.md for the recommended pnpm version.
+
+## Changes
+- Updated \`packageManager\` field from \`pnpm@8.6.10\` to \`pnpm@9.15.9\`
 
 FORMAT YOUR RESPONSE EXACTLY LIKE THIS:
 TITLE: <your title here>
 BODY:
 <your markdown body here>
 
-Do not include any other text or explanations.`;
+Do not include any other text or explanations. Write a real, specific description for this PR based on the actual changes shown above.`;
 };

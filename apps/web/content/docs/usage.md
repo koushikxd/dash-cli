@@ -58,13 +58,23 @@ Requires [GitHub CLI](https://cli.github.com/) installed and authenticated.
 dash pr
 ```
 
-Analyzes your commits, generates title and description, creates the PR. If a PR exists, you can edit it.
+Analyzes your commits, generates title and description, creates the PR. If a PR exists, you can edit it. After creation, prompts to open the PR in your browser.
+
+**Options:**
+
+- `--draft` or `-d` - Create as draft PR
+- `--base <branch>` or `-b` - Target branch (defaults to main/master)
+- `--issue <number>` or `-i` - Link to an issue (adds "Closes #X")
+- `--repo <owner/repo>` or `-R` - Target repository for fork PRs
 
 ```bash
 dash pr --draft
-
 dash pr --base develop
+dash pr --issue 123
+dash pr --repo owner/repo
 ```
+
+When working on a fork, dash detects it and asks if you want to create the PR on the upstream repository.
 
 ### List PRs
 
@@ -82,19 +92,31 @@ dash pr view
 
 ```bash
 dash pr merge
+```
 
+Prompts to select merge method. Or specify directly:
+
+- `--squash` or `-s` - Squash and merge (recommended)
+- `--merge` or `-m` - Create a merge commit
+- `--rebase` or `-r` - Rebase and merge
+
+```bash
 dash pr merge --squash
-dash pr merge --merge
-dash pr merge --rebase
 ```
 
 ## Issues
 
 ```bash
 dash issue list
+```
 
-dash issue list --state all
-dash issue list --limit 10
+**Options:**
+
+- `--state <state>` or `-s` - Filter by state: open, closed, or all (default: open)
+- `--limit <number>` or `-l` - Number of issues to show (default: 20)
+
+```bash
+dash issue list --state all --limit 10
 ```
 
 ## Model selection
@@ -196,7 +218,7 @@ Dash handles big changes automatically. It summarizes stats and includes code sn
 
 ```bash
 dash commit [-g <n>] [-x <files>] [-a] [-t <type>]
-dash pr [create|list|view|merge] [-b <branch>] [-d]
+dash pr [create|list|view|merge] [-b <branch>] [-d] [-i <issue>] [-R <repo>]
 dash issue list [-s <state>] [-l <n>]
 dash model [list|set <model>]
 dash hook <install|uninstall>
@@ -215,6 +237,8 @@ dash commit --all --generate 3
 dash commit --type conventional --exclude dist/
 
 dash pr --draft --base develop
+
+dash pr --issue 42 --repo upstream/project
 
 dash pr merge --squash
 
