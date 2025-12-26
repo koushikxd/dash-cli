@@ -5,7 +5,9 @@ import {
   generatePrompt,
   generatePRSystemPrompt,
   buildPRPrompt,
+  buildSummaryPrompt,
   type PRContext,
+  type SummaryContext,
 } from "~/utils/prompt.js";
 
 const createChatCompletion = async (
@@ -442,4 +444,50 @@ Generate a concise merge commit message. Return only the message, nothing else.`
   const message = sanitizeMessage(content);
 
   return message || prTitle;
+};
+
+export const generateBranchSummary = async (
+  apiKey: string,
+  model: string,
+  context: SummaryContext,
+  timeout: number,
+  proxy?: string,
+  customPrompt?: string | null
+): Promise<string> => {
+  const systemPrompt = `You are a professional developer writing branch summaries.
+Write clear, concise, and informative summaries that describe what happened in the branch.
+Focus on WHAT changed and WHY. Use markdown formatting.`;
+
+  const userPrompt = buildSummaryPrompt(context, customPrompt);
+
+  const completion = await createChatCompletion(
+    apiKey,
+    model,
+    [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ],
+    0.4,
+    1,
+    0,
+    0,
+    2000,
+    1,
+    timeout,
+    proxy
+  );
+
+  const content = completion.choices?.[0]?.message?.content || "";
+
+  if (!content || content.trim().length === 0) {
+    const commitSummary = context.commits
+      .slice(0, 10)
+      .map((c) => `- ${c.message}`)
+      .join("\n");
+    return `## Summary\nBranch contains ${context.commits.length} commit${
+      context.commits.length > 1 ? "s" : ""
+    } with various changes.\n\n## Changes\n${commitSummary}`;
+  }
+
+  return content.trim();
 };

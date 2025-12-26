@@ -210,6 +210,29 @@ monorepo/
 
 Run `dash commit` in any package, and it uses the nearest `.dash` prompts.
 
+## Branch summary
+
+Get a comprehensive overview of changes in your current branch.
+
+### Basic use
+
+```bash
+dash summary
+```
+
+Compares your current branch against the default branch (main/master) and generates:
+- Statistics (files changed, additions, deletions)
+- AI-generated summary of what happened
+- Detailed list of changes in bullet points
+
+### Compare with specific branch
+
+```bash
+dash summary develop
+```
+
+Compares your current branch against the specified target branch.
+
 ## Large diffs
 
 Dash handles big changes automatically. It summarizes stats and includes code snippets so you never hit API limits.
@@ -222,6 +245,7 @@ dash pr [create|list|view|merge] [-b <branch>] [-d] [-i <issue>] [-R <repo>]
 dash issue list [-s <state>] [-l <n>]
 dash model [list|set <model>]
 dash hook <install|uninstall>
+dash summary [branch]
 dash config <get|set> <key=value>
 dash setup
 ```
@@ -249,6 +273,10 @@ dash model
 dash model set llama-3.3-70b-versatile
 
 dash hook install
+
+dash summary
+
+dash summary develop
 ```
 
 Need more details? Check [Configuration](/docs/configuration).

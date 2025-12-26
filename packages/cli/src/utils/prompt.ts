@@ -11,6 +11,14 @@ export interface PRContext {
   diffSummary?: string;
 }
 
+export interface SummaryContext {
+  currentBranch: string;
+  targetBranch: string;
+  commits: Array<{ message: string; body: string }>;
+  stats: { files: number; insertions: number; deletions: number };
+  diffSummary?: string;
+}
+
 const commitTypeFormats: Record<CommitType, string> = {
   "": "<commit message>",
   conventional: "<type>(<optional scope>): <commit message>",
@@ -87,19 +95,20 @@ COMMIT TYPES (use the right one):
 
 QUALITY GUIDELINES:
 - Start with the most important change
+- If the diff includes multiple distinct areas (e.g., feature + docs, fix + tests), mention both using "and" (e.g., "feat: add X and update docs")
 - Use specific, descriptive language based on actual code changes
 - Include the main component/area affected when clear
 - Be clear about what was done, not just what files changed
 - Use proper grammar and punctuation
-- Be conservative - it's better to be slightly vague than wrong
 
 CORRECT EXAMPLES (NO scope, just type and subject):
 - feat: add user login with OAuth integration
+- feat: add branch summary command and update docs
 - fix: resolve memory leak in image processing service
+- fix: correct validation logic and add tests
 - refactor: improve message generation with better prompts
 - style: update sidebar styling and add mode toggle
 - docs: update installation and configuration guide
-- test: add unit tests for JWT token validation
 - chore: update axios to v1.6.0 for security patches
 
 WRONG EXAMPLES (these are hallucinations - don't do this):
@@ -140,6 +149,16 @@ export const getCommitPromptFile = async (): Promise<string | null> => {
 export const getPRPromptFile = async (): Promise<string | null> => {
   const root = await getGitRoot();
   const promptPath = await findUp(".dash/pr.md", {
+    stopAt: root || process.cwd(),
+    type: "file",
+  });
+  if (!promptPath) return null;
+  return readFile(promptPath);
+};
+
+export const getSummaryPromptFile = async (): Promise<string | null> => {
+  const root = await getGitRoot();
+  const promptPath = await findUp(".dash/summary.md", {
     stopAt: root || process.cwd(),
     type: "file",
   });
@@ -295,4 +314,78 @@ BODY:
 <your markdown body here>
 
 Do not include any other text or explanations. Write a real, specific description for this PR based on the actual changes shown above.`;
+};
+
+export const buildSummaryPrompt = (
+  context: SummaryContext,
+  customPrompt?: string | null
+): string => {
+  const commitList = context.commits
+    .map((c, i) => `${i + 1}. ${c.message}${c.body ? `\n   ${c.body}` : ""}`)
+    .join("\n");
+
+  const contextInfo = `CURRENT BRANCH: ${context.currentBranch}
+TARGET BRANCH: ${context.targetBranch}
+STATS: ${context.stats.files} files changed, +${context.stats.insertions} -${
+    context.stats.deletions
+  }
+COMMITS (${context.commits.length} total):
+${commitList}${
+    context.diffSummary
+      ? `\n\nDIFF SUMMARY (top files):\n${context.diffSummary}`
+      : ""
+  }`;
+
+  if (customPrompt) {
+    return `${customPrompt}
+
+${contextInfo}
+
+Generate a comprehensive summary of what happened in this branch.
+
+FORMAT YOUR RESPONSE EXACTLY LIKE THIS:
+## Summary
+<1-3 sentences explaining the overall change set>
+
+## Changes
+- <bullet point describing a specific change>
+- <bullet point describing another change>
+- <continue with more bullets as needed>
+
+Do not include any other text or explanations.`;
+  }
+
+  return `Generate a comprehensive summary of what happened in the branch "${context.currentBranch}" compared to "${context.targetBranch}".
+
+${contextInfo}
+
+REQUIREMENTS:
+1. Provide a clear, high-level summary (1-3 sentences) of what the branch accomplishes
+2. List specific changes in bullet points that describe WHAT changed functionally
+3. Focus on the actual code changes shown in the commits and diff, not assumptions
+4. Group related changes together when appropriate
+5. Be specific about components, files, or areas affected when clear from the context
+6. Do NOT include raw statistics (file counts, line numbers) in your summary
+7. Use clear, professional language suitable for a developer audience
+
+FORMAT YOUR RESPONSE EXACTLY LIKE THIS:
+## Summary
+<1-3 sentences explaining the overall change set and why it matters>
+
+## Changes
+- <bullet point describing a specific change>
+- <bullet point describing another change>
+- <continue with more bullets as needed>
+
+EXAMPLE OUTPUT:
+
+## Summary
+Improves readability and navigation by refining the docs viewer layout, sidebar styling, and related UI components.
+
+## Changes
+- Updated sidebar spacing, typography, and active states for clearer navigation
+- Refined docs viewer styles to improve content hierarchy and code block presentation
+- Polished related UI components to keep visuals consistent across the app
+
+Do not include any other text or explanations. Write a real, specific summary based on the actual changes shown above.`;
 };
