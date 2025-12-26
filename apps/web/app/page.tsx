@@ -9,6 +9,7 @@ import { InstallCommand } from "~/components/install-command";
 import { GithubStars } from "~/components/github-stars";
 import { NpmDownloads } from "~/components/npm-downloads";
 import { cn } from "~/styles/utils";
+import { CLI_VERSION } from "~/lib/constants";
 
 function PlusIcon({ className }: { className?: string }) {
   return (
@@ -52,7 +53,9 @@ export default function Page() {
             className="flex flex-col items-center gap-6"
           >
             <div className="flex w-full items-center justify-between text-xs font-medium tracking-wider uppercase">
-              <span className="text-muted-foreground">v1.4.3 is out!</span>
+              <span className="text-muted-foreground">
+                v{CLI_VERSION} is out!
+              </span>
               <div className="text-muted-foreground flex items-center gap-4">
                 <React.Suspense fallback={<NpmDownloads />}>
                   <NpmDownloads />

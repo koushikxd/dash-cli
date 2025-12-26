@@ -198,9 +198,9 @@ export const buildPRPrompt = (
 
   const contextInfo = `BRANCH: ${context.branchName}
 BASE BRANCH: ${context.baseBranch}
-STATS: ${context.stats.files} files changed, +${context.stats.insertions} -${
-    context.stats.deletions
-  }
+STATS (for your reference only, do not include in output): ${
+    context.stats.files
+  } files, +${context.stats.insertions} -${context.stats.deletions}
 ${context.issue ? `RELATED ISSUE: #${context.issue}\n` : ""}
 COMMIT TYPES: ${commitTypeSummary || "unknown"}
 COMMITS (${context.commits.length} total):
@@ -243,7 +243,8 @@ REQUIREMENTS:
    - Use markdown formatting
    - ${isSimple ? "Keep it brief and focused" : "Be thorough and detailed"}
    - Structure with clear sections
-   - Include specific details about what changed and why (use commit list + diff summary)
+   - Describe WHAT changed functionally, not raw statistics
+   - Do NOT include file counts, additions/deletions, or any numeric stats in the body
    - Cover all major areas represented in the commit list (do not ignore later commits)
    ${context.issue ? `- Include "Closes #${context.issue}" at the end` : ""}
 
@@ -280,6 +281,13 @@ Improves readability and navigation by refining the docs viewer layout, sidebar 
 - Updated sidebar spacing, typography, and active states for clearer navigation
 - Refined docs viewer styles to improve content hierarchy and code block presentation
 - Polished related UI components to keep visuals consistent across the app
+
+BAD EXAMPLE (never do this):
+TITLE: chore: update files
+BODY:
+11 files changed, +2242 additions, -4373 deletions.
+
+^ This is WRONG. Never echo raw stats. Always describe the actual functional changes.
 
 FORMAT YOUR RESPONSE EXACTLY LIKE THIS:
 TITLE: <your title here>

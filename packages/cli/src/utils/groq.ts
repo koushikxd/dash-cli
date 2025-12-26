@@ -356,11 +356,12 @@ ${editRequest}
 LATEST COMMITS:
 ${context.commits.map((c, i) => `${i + 1}. ${c.message}`).join("\n")}
 
-STATS: ${context.stats.files} files changed, +${context.stats.insertions} -${
-    context.stats.deletions
-  }
-
 Generate an updated PR title and description that incorporates the user's requested changes.
+
+IMPORTANT RULES:
+- Describe WHAT changed functionally, not raw statistics
+- Do NOT include file counts, additions/deletions, or any numeric stats in your response
+- Focus on the actual changes from the commits above
 
 FORMAT YOUR RESPONSE EXACTLY LIKE THIS:
 TITLE: <your updated title here>
