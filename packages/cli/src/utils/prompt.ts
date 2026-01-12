@@ -69,6 +69,7 @@ CRITICAL RULES:
 - Maximum ${maxLength} characters (be concise but complete)
 - Imperative mood, present tense
 - Be specific and descriptive
+- When there are multiple distinct changes, list them all or use "and more/other changes"
 - NO explanations, questions, or meta-commentary
 - ALWAYS complete the message - never truncate mid-sentence
 
@@ -95,19 +96,23 @@ COMMIT TYPES (use the right one):
 
 QUALITY GUIDELINES:
 - Start with the most important change
-- If the diff includes multiple distinct areas (e.g., feature + docs, fix + tests), mention both using "and" (e.g., "feat: add X and update docs")
+- When there are multiple distinct changes (2-3 areas), list them all using "and" or commas
+- When there are many changes (4+), list the main ones and append "and other changes" or "and more"
 - Use specific, descriptive language based on actual code changes
 - Include the main component/area affected when clear
 - Be clear about what was done, not just what files changed
 - Use proper grammar and punctuation
+- Prioritize completeness: better to acknowledge all major areas than to be overly brief
 
 CORRECT EXAMPLES (NO scope, just type and subject):
 - feat: add user login with OAuth integration
+- feat: add sidebar, user profile page and API endpoints
 - feat: add branch summary command and update docs
 - fix: resolve memory leak in image processing service
 - fix: correct validation logic and add tests
-- refactor: improve message generation with better prompts
-- style: update sidebar styling and add mode toggle
+- refactor: improve message generation, update error handling and more
+- style: update sidebar styling, refine button components and add mode toggle
+- style: update navigation layout and other UI improvements
 - docs: update installation and configuration guide
 - chore: update axios to v1.6.0 for security patches
 
