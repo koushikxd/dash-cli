@@ -10,7 +10,6 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
 
 import { AsideLink } from "~/components/aside-link";
-import { PlusIcon } from "~/components/plus-icon";
 
 import { config } from "~/config";
 
@@ -19,13 +18,13 @@ export function Sidebar() {
 
   const getDefaultValue = React.useCallback(() => {
     const defaultValue = config.docs.contents.findIndex((content) =>
-      content.list.some((item) => item.href === pathname)
+      content.list.some((item) => item.href === pathname),
     );
     return defaultValue === -1 ? 0 : defaultValue;
   }, [pathname]);
 
   const [currentOpen, setCurrentOpen] = React.useState<number>(() =>
-    getDefaultValue()
+    getDefaultValue(),
   );
 
   return (
@@ -83,7 +82,6 @@ export function Sidebar() {
             </div>
           </MotionConfig>
         </div>
-        <PlusIcon className="absolute -bottom-2 -left-2 z-10" />
       </aside>
     </div>
   );

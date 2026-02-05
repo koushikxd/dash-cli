@@ -14,12 +14,14 @@ Dash fixes this. It analyzes your code changes and generates meaningful commit m
 ## Quick example
 
 ```bash
-dash  # Auto-stages, commits, and prompts to push
+dash # Auto-stages, commits, and prompts to push
 
 dash pr
 ```
 
 That's it. No more writer's block.
+
+**Note**: If you have the system shell `dash` installed (common on Debian/Ubuntu), use `dash-cli` instead of dash for all commands.
 
 ## What it does
 
