@@ -1,10 +1,10 @@
-import fs from "fs/promises";
-import path from "path";
+import fs from "node:fs/promises";
+import path from "node:path";
 
 export const fileExists = (filePath: string) =>
   fs.lstat(filePath).then(
     () => true,
-    () => false
+    () => false,
   );
 
 export interface FindUpOptions {

@@ -1,7 +1,7 @@
 import { command } from "cleye";
 import { execa } from "execa";
 import { black, green, red, bgCyan } from "kolorist";
-import { intro, outro, spinner, text, isCancel } from "@clack/prompts";
+import { intro, outro, spinner, text, isCancel, confirm } from "@clack/prompts";
 import {
   assertGitRepo,
   getStagedDiff,
@@ -17,7 +17,7 @@ import { getCommitPromptFile } from "~/utils/prompt.js";
 const buildDiffSnippets = async (
   files: string[],
   perFileMaxLines: number = 30,
-  totalMaxChars: number = 4000
+  totalMaxChars: number = 4000,
 ): Promise<string> => {
   try {
     const targetFiles = files.slice(0, 6);
@@ -79,7 +79,7 @@ export const buildSingleCommitPrompt = async (
   files: string[],
   compactSummary: string,
   maxLength: number,
-  customPrompt?: string | null
+  customPrompt?: string | null,
 ): Promise<string> => {
   const snippets = await buildDiffSnippets(files, 30, 3500);
 
@@ -141,12 +141,13 @@ WRONG EXAMPLES (hallucinating features not in diff):
 Return only the commit message line, no explanations.`;
 };
 
-const runCommit = async (
+export const runCommitWithPush = async (
   generate: number | undefined,
   excludeFiles: string[],
   stageAll: boolean,
   commitType: string | undefined,
-  rawArgv: string[]
+  rawArgv: string[],
+  promptForPush: boolean = false,
 ) => {
   intro(bgCyan(black(" dash commit ")));
   await assertGitRepo();
@@ -163,15 +164,16 @@ const runCommit = async (
   if (!staged) {
     detectingFiles.stop("Detecting staged files");
     throw new KnownError(
-      "No staged changes found. Stage your changes manually, or automatically stage all changes with the `--all` flag."
+      "No staged changes found. Stage your changes manually, or automatically stage all changes with the `--all` flag.",
     );
   }
 
   const diffSummary = await getDiffSummary(excludeFiles);
   const isLargeDiff = staged.diff.length > 50000;
   const isManyFiles = staged.files.length >= 5;
-  const hasLargeIndividualFile =
-    diffSummary && diffSummary.fileStats.some((f) => f.changes > 500);
+  const hasLargeIndividualFile = diffSummary?.fileStats.some(
+    (f) => f.changes > 500,
+  );
   const needsEnhancedAnalysis =
     isLargeDiff || isManyFiles || hasLargeIndividualFile;
 
@@ -182,18 +184,18 @@ const runCommit = async (
 
     detectingFiles.stop(
       `${getDetectedMessage(
-        staged.files
+        staged.files,
       )} (${diffSummary.totalChanges.toLocaleString()} changes):\n${staged.files
         .map((file) => `     ${file}`)
         .join(
-          "\n"
-        )}\n\n  ${reason} - using enhanced analysis for better commit message`
+          "\n",
+        )}\n\n  ${reason} - using enhanced analysis for better commit message`,
     );
   } else {
     detectingFiles.stop(
       `${getDetectedMessage(staged.files)}:\n${staged.files
         .map((file) => `     ${file}`)
-        .join("\n")}`
+        .join("\n")}`,
     );
   }
 
@@ -217,7 +219,7 @@ const runCommit = async (
         staged.files,
         compact,
         config["max-length"],
-        customPrompt
+        customPrompt,
       );
       messages = await generateCommitMessageFromSummary(
         config.GROQ_API_KEY,
@@ -228,7 +230,7 @@ const runCommit = async (
         config["max-length"],
         config.type,
         config.timeout,
-        config.proxy
+        config.proxy,
       );
     } else {
       const fileList = staged.files.join(", ");
@@ -236,7 +238,7 @@ const runCommit = async (
         staged.files,
         `Files: ${fileList}`,
         config["max-length"],
-        customPrompt
+        customPrompt,
       );
       messages = await generateCommitMessageFromSummary(
         config.GROQ_API_KEY,
@@ -247,7 +249,7 @@ const runCommit = async (
         config["max-length"],
         config.type,
         config.timeout,
-        config.proxy
+        config.proxy,
       );
     }
   } finally {
@@ -276,7 +278,34 @@ const runCommit = async (
 
   await execa("git", ["commit", "-m", finalMessage, ...rawArgv]);
 
-  outro(`${green("✔")} Successfully committed!`);
+  outro(`${green("√")} Successfully committed!`);
+
+  if (promptForPush) {
+    const shouldPush = await confirm({
+      message: "Push to remote? (Press Enter to push, Esc to skip)",
+      initialValue: true,
+    });
+
+    if (isCancel(shouldPush)) {
+      outro("Push cancelled");
+      return;
+    }
+
+    if (shouldPush) {
+      const pushSpinner = spinner();
+      pushSpinner.start("Pushing to remote");
+      try {
+        await execa("git", ["push"]);
+        pushSpinner.stop("Pushed to remote");
+        outro(`${green("√")} Successfully pushed to remote!`);
+      } catch (error: any) {
+        pushSpinner.stop("Push failed");
+        outro(`${red("×")} Failed to push: ${error.message}`);
+      }
+    } else {
+      outro("Changes not pushed");
+    }
+  }
 };
 
 export default command(
@@ -313,16 +342,17 @@ export default command(
   },
   (argv) => {
     const rawArgv = process.argv.slice(3);
-    runCommit(
+    runCommitWithPush(
       argv.flags.generate,
       argv.flags.exclude,
       argv.flags.all,
       argv.flags.type,
-      rawArgv
-    ).catch((error) => {
-      outro(`${red("✖")} ${error.message}`);
+      rawArgv,
+      true,
+    ).catch((error: any) => {
+      outro(`${red("×")} ${error.message}`);
       handleCliError(error);
       process.exit(1);
     });
-  }
+  },
 );

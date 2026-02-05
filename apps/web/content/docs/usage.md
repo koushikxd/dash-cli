@@ -7,6 +7,20 @@ Everything you can do with dash.
 
 ## Commit messages
 
+### Quick commit (recommended)
+
+```bash
+dash
+```
+
+The fastest way to commit. Simply run `dash` and it will:
+1. Auto-stage all tracked files
+2. Generate a commit message
+3. Let you edit or accept it
+4. Ask if you want to push to remote
+
+Press **Enter** to push, **Esc** to skip pushing.
+
 ### Basic use
 
 ```bash
@@ -14,7 +28,9 @@ git add .
 dash commit
 ```
 
-Dash shows you a message. Use it, edit it, or cancel.
+Dash shows you a message. Use it, edit it, or cancel. After committing, prompts to push to remote.
+
+Press **Enter** to push, **Esc** to skip pushing.
 
 ### Stage everything
 
@@ -22,7 +38,7 @@ Dash shows you a message. Use it, edit it, or cancel.
 dash commit --all
 ```
 
-Same as `git commit --all`—stages tracked files before committing.
+Same as `git commit --all`—stages tracked files before committing, then prompts to push.
 
 ### Multiple options
 
@@ -253,29 +269,44 @@ dash setup
 ## Quick examples
 
 ```bash
+# Quick commit with auto-stage and push prompt
+dash
+
+# Stage specific files and commit
 git add .
 dash commit
 
+# Generate 3 commit message options
 dash commit --all --generate 3
 
+# Conventional commits with file exclusions
 dash commit --type conventional --exclude dist/
 
+# Create draft PR on develop branch
 dash pr --draft --base develop
 
+# Create PR linked to issue on upstream repo
 dash pr --issue 42 --repo upstream/project
 
+# Merge PR with squash
 dash pr merge --squash
 
+# List all issues (closed and open)
 dash issue list --state all --limit 10
 
+# Interactive model selection
 dash model
 
+# Set specific model
 dash model set llama-3.3-70b-versatile
 
+# Install git hook for auto-generation
 dash hook install
 
+# Generate branch summary against main
 dash summary
 
+# Generate branch summary against develop
 dash summary develop
 ```
 

@@ -14,8 +14,7 @@ Dash fixes this. It analyzes your code changes and generates meaningful commit m
 ## Quick example
 
 ```bash
-git add .
-dash commit
+dash  # Auto-stages, commits, and prompts to push
 
 dash pr
 ```
@@ -37,10 +36,11 @@ Dash uses Groq's API because it's fast, cheap, and reliable. You get results in 
 
 ## How it works
 
-1. You stage changes (`git add`)
+1. Run `dash` (or stage changes with `git add` and run `dash commit`)
 2. Dash reads your diff
 3. AI generates a commit message
 4. You review, edit if needed, and commit
+5. Choose whether to push to remote
 
 Same flow for PRs—Dash reads your commits, generates a description, and creates the PR.
 

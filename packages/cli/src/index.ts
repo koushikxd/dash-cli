@@ -1,7 +1,7 @@
 import { cli } from "cleye";
-import { readFileSync } from "fs";
-import { fileURLToPath } from "url";
-import { dirname, join } from "path";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import commitCommand from "~/commands/commit.js";
 import prCommand from "~/commands/pr.js";
 import issueCommand from "~/commands/issue.js";
@@ -11,11 +11,12 @@ import hookCommand, { isCalledFromGitHook } from "~/commands/hook.js";
 import setupCommand from "~/commands/setup.js";
 import summaryCommand from "~/commands/summary.js";
 import prepareCommitMessageHook from "~/commands/prepare-commit-msg-hook.js";
+import { runCommitWithPush } from "~/commands/commit.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const packageJson = JSON.parse(
-  readFileSync(join(__dirname, "../package.json"), "utf8")
+  readFileSync(join(__dirname, "../package.json"), "utf8"),
 );
 const { description, version } = packageJson;
 
@@ -28,15 +29,24 @@ if (isCalledFromGitHook) {
     {
       name: "dash",
       version,
-      commands: [commitCommand, prCommand, issueCommand, configCommand, modelCommand, hookCommand, setupCommand, summaryCommand],
+      commands: [
+        commitCommand,
+        prCommand,
+        issueCommand,
+        configCommand,
+        modelCommand,
+        hookCommand,
+        setupCommand,
+        summaryCommand,
+      ],
       help: {
         description,
       },
       ignoreArgv: (type) => type === "unknown-flag" || type === "argument",
     },
-    (argv) => {
-      argv.showHelp();
+    async (_argv) => {
+      await runCommitWithPush(undefined, [], true, undefined, rawArgv, true);
     },
-    rawArgv
+    rawArgv,
   );
 }
