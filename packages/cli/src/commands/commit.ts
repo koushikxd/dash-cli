@@ -155,7 +155,7 @@ export const runCommitWithPush = async (
   const detectingFiles = spinner();
 
   if (stageAll) {
-    await execa("git", ["add", "--update"]);
+    await execa("git", ["add", "--all"]);
   }
 
   detectingFiles.start("Detecting staged files");
