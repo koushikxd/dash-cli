@@ -491,3 +491,57 @@ Focus on WHAT changed and WHY. Use markdown formatting.`;
 
   return content.trim();
 };
+
+export const generateIssueContent = async (
+  apiKey: string,
+  model: string,
+  description: string,
+  timeout: number,
+  proxy?: string
+): Promise<PRContent> => {
+  const systemPrompt = `You are a professional developer creating a GitHub issue.
+Given a description, generate a clear and concise issue title and a well-structured body.
+Use markdown formatting for the body. Include sections like "Description" and "Expected Behavior" only if relevant.
+Keep the title under 72 characters. Be direct and specific.`;
+
+  const userPrompt = `Create a GitHub issue from this description:
+
+${description}
+
+FORMAT YOUR RESPONSE EXACTLY LIKE THIS:
+TITLE: <issue title here>
+BODY:
+<issue body in markdown here>
+
+Do not include any other text or explanations.`;
+
+  const completion = await createChatCompletion(
+    apiKey,
+    model,
+    [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ],
+    0.4,
+    1,
+    0,
+    0,
+    1500,
+    1,
+    timeout,
+    proxy
+  );
+
+  const content = completion.choices?.[0]?.message?.content || "";
+  const parsed = parsePRResponse(content);
+
+  if (!parsed.title) {
+    parsed.title = description.slice(0, 72).trim();
+  }
+
+  if (!parsed.body) {
+    parsed.body = description;
+  }
+
+  return parsed;
+};

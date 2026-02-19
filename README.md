@@ -63,10 +63,15 @@ dash pr merge --squash
 ### Issues
 
 ```bash
+dash issue create
+dash issue create --label bug
+
 dash issue list
 dash issue list --state all
 dash issue list --limit 10
 ```
+
+Create issues with AI-generated titles and descriptions from a plain-text description. The CLI prompts you to describe the issue, generates a polished title and body, shows a preview, and creates it on GitHub after confirmation.
 
 ### Model
 

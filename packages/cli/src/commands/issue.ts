@@ -1,9 +1,11 @@
 import { command } from "cleye";
 import { execa } from "execa";
 import { black, green, red, bgCyan, dim, cyan, yellow, magenta } from "kolorist";
-import { intro, outro, spinner } from "@clack/prompts";
+import { intro, outro, spinner, text, isCancel, confirm } from "@clack/prompts";
 import { assertGitRepo, assertGhInstalled } from "~/utils/git.js";
-import { handleCliError } from "~/errors.js";
+import { getConfig } from "~/utils/config.js";
+import { generateIssueContent } from "~/utils/groq.js";
+import { KnownError, handleCliError } from "~/errors.js";
 
 interface IssueListItem {
   number: number;
@@ -89,6 +91,106 @@ const runIssueList = async (state: string, limit: number) => {
   }
 };
 
+const runIssueCreate = async (label?: string) => {
+  intro(bgCyan(black(" dash issue create ")));
+
+  await assertGitRepo();
+  await assertGhInstalled();
+
+  const description = await text({
+    message: "Describe the issue",
+    placeholder: "e.g., Login page crashes when submitting empty form",
+    validate: (value) => {
+      if (!value || value.trim().length < 5) {
+        return "Description must be at least 5 characters";
+      }
+    },
+  });
+
+  if (isCancel(description)) {
+    outro("Issue creation cancelled");
+    return;
+  }
+
+  const { env } = process;
+  const config = await getConfig({
+    GROQ_API_KEY: env.GROQ_API_KEY,
+    proxy:
+      env.https_proxy || env.HTTPS_PROXY || env.http_proxy || env.HTTP_PROXY,
+  });
+
+  const s = spinner();
+  s.start("Generating issue with AI");
+
+  let title: string;
+  let body: string;
+  try {
+    const result = await generateIssueContent(
+      config.GROQ_API_KEY,
+      config.model,
+      description as string,
+      config.timeout,
+      config.proxy
+    );
+    title = result.title;
+    body = result.body;
+  } catch {
+    s.stop("Failed to generate issue");
+    throw new KnownError("Failed to generate issue content. Please try again.");
+  }
+
+  s.stop("Issue generated");
+
+  console.log("");
+  console.log(`${cyan("Title:")} ${title}`);
+  console.log("");
+  console.log(dim("─".repeat(60)));
+  console.log(body);
+  console.log(dim("─".repeat(60)));
+  console.log("");
+
+  const shouldCreate = await confirm({
+    message: "Create this issue on GitHub?",
+  });
+
+  if (isCancel(shouldCreate) || !shouldCreate) {
+    outro("Issue creation cancelled");
+    return;
+  }
+
+  s.start("Creating issue on GitHub");
+
+  try {
+    const args = [
+      "issue",
+      "create",
+      "--title",
+      title,
+      "--body",
+      body,
+    ];
+
+    if (label) {
+      args.push("--label", label);
+    }
+
+    const { stdout } = await execa("gh", args);
+    s.stop("Issue created");
+
+    console.log("");
+    console.log(`${green("✔")} ${dim(stdout)}`);
+
+    outro(`${green("✔")} Issue created successfully`);
+  } catch (error) {
+    s.stop("Failed to create issue");
+    console.error(`${red("✖")} Failed to create issue on GitHub`);
+    if (error instanceof Error) {
+      console.error(dim(error.message));
+    }
+    process.exit(1);
+  }
+};
+
 export default command(
   {
     name: "issue",
@@ -106,30 +208,46 @@ export default command(
         alias: "l",
         default: 20,
       },
+      label: {
+        type: String,
+        description: "Label to add when creating an issue",
+      },
     },
     help: {
-      description: "List repository issues",
+      description: "Create and list repository issues",
       examples: [
+        "dash issue create",
+        "dash issue create --label bug",
         "dash issue list",
         "dash issue list --state all",
         "dash issue list --limit 10",
       ],
     },
+    ignoreArgv: (type) => type === "unknown-flag" || type === "argument",
   },
   (argv) => {
     const subcommand = argv._.subcommand;
 
-    if (subcommand && subcommand !== "list") {
-      console.error(`${red("✖")} Unknown subcommand: ${subcommand}`);
-      console.log(`\nAvailable subcommands: list`);
-      process.exit(1);
+    if (subcommand === "create") {
+      runIssueCreate(argv.flags.label).catch((error) => {
+        outro(`${red("✖")} ${error.message}`);
+        handleCliError(error);
+        process.exit(1);
+      });
+      return;
     }
 
-    runIssueList(argv.flags.state, argv.flags.limit).catch((error) => {
-      outro(`${red("✖")} ${error.message}`);
-      handleCliError(error);
-      process.exit(1);
-    });
+    if (!subcommand || subcommand === "list") {
+      runIssueList(argv.flags.state, argv.flags.limit).catch((error) => {
+        outro(`${red("✖")} ${error.message}`);
+        handleCliError(error);
+        process.exit(1);
+      });
+      return;
+    }
+
+    console.error(`${red("✖")} Unknown subcommand: ${subcommand}`);
+    console.log(`\nAvailable subcommands: create, list`);
+    process.exit(1);
   }
 );
-
