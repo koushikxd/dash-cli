@@ -1,154 +1,361 @@
-# Dash
+---
 
-AI-powered Git CLI. Generate commit messages, create PRs, manage issues—all from your terminal.
+## Dash
 
-## Install
+**Dash** is an AI-powered Git assistant that lives in your terminal. It helps you write better commit messages, open pull requests, and manage issues faster — so you can focus on building instead of writing boilerplate.
+
+Whether you’re working solo or in a team, Dash keeps your Git workflow clean, consistent, and efficient.
+
+---
+
+## ✨ Features
+
+* 🤖 AI-generated commit messages from staged changes
+* 🔀 Create pull requests with smart descriptions
+* 🐛 Generate GitHub issues from plain text
+* 📋 Preview before applying changes
+* ⚡ Works directly in your terminal
+* 🎯 Conventional commit support
+* 🧩 Custom prompt rules per repository
+* 🪝 Git hooks for automatic commit generation
+* 🔧 Configurable AI models via Groq
+
+---
+
+## 📦 Installation
 
 ```bash
 npm install -g @koushik_xd/dash
 ```
 
-> **Linux users:** If `dash` runs the system shell instead of this CLI, use `dash-cli` instead.
+> Linux users: If `dash` runs the system shell instead of this CLI, use:
+>
+> ```bash
+> dash-cli
+> ```
 
-## Setup
+---
 
-Get your free API key from [console.groq.com/keys](https://console.groq.com/keys):
+## 🔑 Setup
+
+### 1. Get an API key
+
+Create a free key at:
+
+👉 [https://console.groq.com/keys](https://console.groq.com/keys)
+
+### 2. Configure Dash
 
 ```bash
 dash config set GROQ_API_KEY=gsk_your_key_here
 ```
 
-Or use an environment variable:
+Or use environment variables:
 
 ```bash
 export GROQ_API_KEY=gsk_your_key_here
 ```
 
-## Quick start
+---
+
+## 🚀 Quick Start
+
+Stage your changes:
 
 ```bash
 git add .
-dash commit
+```
 
+Generate a commit:
+
+```bash
+dash commit
+```
+
+Create a pull request:
+
+```bash
 dash pr
 ```
 
-## Commands
+That’s it — Dash handles the rest.
+
+---
+
+## 🧠 How It Works
+
+1. Dash reads your Git diff
+2. Sends context to the AI model
+3. Generates structured output (commit / PR / issue)
+4. Shows preview for confirmation
+5. Applies changes safely
+
+No changes happen without your approval.
+
+---
+
+## 🛠 Commands
 
 ### Commit
 
+Generate commit messages from staged changes:
+
 ```bash
 dash commit
+```
 
-dash commit --all
-dash commit --generate 3
-dash commit --exclude dist/
+Options:
+
+```bash
+dash commit --all           # Stage all changes automatically
+dash commit --generate 3    # Suggest multiple messages
+dash commit --exclude dist/ # Ignore paths
 dash commit --type conventional
 ```
 
-### Pull requests
+---
 
-Requires [GitHub CLI](https://cli.github.com/).
+### Pull Requests
+
+Requires GitHub CLI:
+
+👉 [https://cli.github.com/](https://cli.github.com/)
+
+Create PR:
 
 ```bash
 dash pr
+```
+
+Options:
+
+```bash
 dash pr --draft
 dash pr --base develop
+```
 
+Manage PRs:
+
+```bash
 dash pr list
 dash pr view
 dash pr merge --squash
 ```
 
+---
+
 ### Issues
+
+Create issues with AI-generated titles and descriptions:
 
 ```bash
 dash issue create
 dash issue create --label bug
+```
 
+List issues:
+
+```bash
 dash issue list
 dash issue list --state all
 dash issue list --limit 10
 ```
 
-Create issues with AI-generated titles and descriptions from a plain-text description. The CLI prompts you to describe the issue, generates a polished title and body, shows a preview, and creates it on GitHub after confirmation.
+---
 
-### Model
+### Model Management
+
+View models:
 
 ```bash
-dash model
 dash model list
+```
+
+Change model:
+
+```bash
 dash model set llama-3.3-70b-versatile
 ```
 
-Change AI models interactively or directly. See all models at [console.groq.com/docs/models](https://console.groq.com/docs/models).
+Open model selector:
 
-### Git hook
+```bash
+dash model
+```
+
+---
+
+### Git Hooks
+
+Install automatic commit generation:
 
 ```bash
 dash hook install
+```
+
+Remove hook:
+
+```bash
 dash hook uninstall
 ```
 
-Then `git commit` auto-generates messages.
+After installing, running:
 
-## Configuration
+```bash
+git commit
+```
 
-Config lives in `~/.dash`:
+will generate messages automatically.
+
+---
+
+## ⚙️ Configuration
+
+Config file location:
+
+```
+~/.dash
+```
+
+Set values:
 
 ```bash
 dash config set <key>=<value>
+```
+
+Get values:
+
+```bash
 dash config get <key>
 ```
 
-| Option       | Default            | Description          |
-| ------------ | ------------------ | -------------------- |
-| GROQ_API_KEY | -                  | API key (required)   |
-| model        | openai/gpt-oss-20b | AI model             |
-| generate     | 1                  | Messages to generate |
-| type         | -                  | Use `conventional`   |
-| max-length   | 100                | Max message length   |
-| locale       | en                 | Message language     |
+Options:
 
-Examples:
+| Option       | Default            | Description           |
+| ------------ | ------------------ | --------------------- |
+| GROQ_API_KEY | —                  | Required API key      |
+| model        | openai/gpt-oss-20b | AI model              |
+| generate     | 1                  | Number of suggestions |
+| type         | —                  | Conventional commits  |
+| max-length   | 100                | Message length limit  |
+| locale       | en                 | Language              |
+
+Example:
 
 ```bash
-dash config set model=llama-3.3-70b-versatile
 dash config set type=conventional max-length=72
 ```
 
-## Custom prompts
+---
 
-Create a `.dash` folder in your repo with custom guidelines:
+## 🎨 Custom Prompts
 
-**`.dash/commit.md`** - Commit rules:
+Add repository-specific rules:
 
-```markdown
-Use present tense. Include ticket numbers.
+```
+.dash/
+  commit.md
+  pr.md
 ```
 
-**`.dash/pr.md`** - PR rules:
+Example:
+
+**.dash/commit.md**
 
 ```markdown
-Include testing steps and related tickets.
+Use present tense. Reference Jira tickets.
+Keep messages under 72 characters.
 ```
 
-Dash uses these instead of default prompts. Works with monorepos—searches up the tree to find the nearest `.dash` folder.
+**.dash/pr.md**
 
-## Documentation
+```markdown
+Include testing instructions and risk notes.
+```
 
-Full docs at [koushikxd.github.io/dash-cli](https://koushikxd.github.io/dash-cli)
+Dash automatically detects and applies these.
 
-## Requirements
+Supports monorepos — searches upward for the nearest `.dash` folder.
 
-- Node.js 18+
-- Git
-- GitHub CLI (for PR/issue commands)
+---
 
-## Acknowledgments
+## 🧩 Requirements
 
-Inspired by [noto](https://github.com/snelusha/noto) by Sithija Nelusha Silva.
+* Node.js 18+
+* Git
+* GitHub CLI (for PR and issue features)
+* Groq API key
 
-## License
+---
+
+## 🐞 Troubleshooting
+
+### Dash command not found
+
+Check global npm install path:
+
+```bash
+npm list -g --depth=0
+```
+
+Reinstall if needed:
+
+```bash
+npm install -g @koushik_xd/dash
+```
+
+---
+
+### GitHub CLI not detected
+
+Install:
+
+```bash
+gh auth login
+```
+
+---
+
+### API errors
+
+Verify key:
+
+```bash
+dash config get GROQ_API_KEY
+```
+
+---
+
+## 🔐 Security
+
+* API keys stored locally
+* No repository data persisted
+* Only diff context sent to model
+* User confirmation required before actions
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome!
+
+1. Fork repo
+2. Create branch
+3. Make changes
+4. Open PR
+
+---
+
+## 💡 Inspiration
+
+Inspired by:
+
+👉 noto by Sithija Nelusha Silva
+
+---
+
+## 📜 License
 
 MIT
+
+---
