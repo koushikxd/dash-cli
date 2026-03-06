@@ -56,7 +56,7 @@ export function NpmDownloads() {
 
       const today = new Date().toISOString().split("T")[0];
       const startDate = new Date("2024-12-01").toISOString().split("T")[0];
-      const url = `https://api.npmjs.org/downloads/point/${startDate}:${today}/@koushik_xd/dash`;
+      const url = `https://api.npmjs.org/downloads/point/${startDate}:${today}/dash-cli`;
 
       try {
         const response = await fetch(url);
@@ -73,7 +73,7 @@ export function NpmDownloads() {
         setCookie(COOKIE_NAME, data.downloads.toString());
         if (typeof document !== "undefined") {
           document.cookie = `${COOKIE_TIMESTAMP}=${Date.now()}; expires=${new Date(
-            Date.now() + ONE_HOUR
+            Date.now() + ONE_HOUR,
           ).toUTCString()}; path=/; SameSite=Lax`;
         }
         setIsLoaded(true);
@@ -92,12 +92,12 @@ export function NpmDownloads() {
   return (
     <Link
       className="group outline-none"
-      href="https://www.npmjs.com/package/@koushik_xd/dash"
+      href="https://www.npmjs.com/package/dash-cli"
     >
       <div
         className={cn(
           "text-muted-foreground/80 flex items-center gap-2 font-mono transition-opacity duration-300 select-none group-hover:underline md:text-sm",
-          isLoaded ? "opacity-100" : "opacity-0"
+          isLoaded ? "opacity-100" : "opacity-0",
         )}
       >
         <HugeiconsIcon

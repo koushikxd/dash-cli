@@ -5,6 +5,11 @@ import { intro, outro, spinner, text, isCancel, confirm } from "@clack/prompts";
 import {
   assertGitRepo,
   getStagedDiff,
+  getRawStagedFiles,
+  getWorkingTreeStatus,
+  getCurrentBranch,
+  getDefaultRemote,
+  getUpstreamBranch,
   getDetectedMessage,
   getDiffSummary,
   buildCompactSummary,
@@ -73,6 +78,41 @@ const buildDiffSnippets = async (
   } catch {
     return "";
   }
+};
+
+const formatStatusHint = (status: {
+  staged: number;
+  unstaged: number;
+  untracked: number;
+}) => {
+  const parts: string[] = [];
+  const total = status.unstaged + status.untracked;
+  if (status.unstaged > 0) {
+    parts.push(`${status.unstaged} unstaged`);
+  }
+  if (status.untracked > 0) {
+    parts.push(`${status.untracked} untracked`);
+  }
+  if (parts.length === 0) return "";
+  const summary = parts.join(", ");
+  return `\nDetected ${summary} file${total === 1 ? "" : "s"}.`;
+};
+
+const buildNoChangesMessage = async (stageAll: boolean) => {
+  const status = await getWorkingTreeStatus();
+  const hint = formatStatusHint(status);
+
+  if (status.total === 0) {
+    return "No changes to commit. Your working tree is clean.";
+  }
+
+  if (stageAll) {
+    if (status.staged === 0) {
+      return `No changes to commit. Nothing could be staged.${hint}`;
+    }
+  }
+
+  return `No staged changes found. Stage your changes with \`git add\` or use \`--all\` to stage tracked files automatically.${hint}`;
 };
 
 export const buildSingleCommitPrompt = async (
@@ -162,10 +202,15 @@ export const runCommitWithPush = async (
   const staged = await getStagedDiff(excludeFiles);
 
   if (!staged) {
+    const rawStaged = await getRawStagedFiles();
+    const statusMessage = await buildNoChangesMessage(stageAll);
     detectingFiles.stop("Detecting staged files");
-    throw new KnownError(
-      "No staged changes found. Stage your changes manually, or automatically stage all changes with the `--all` flag.",
-    );
+    if (rawStaged.length > 0) {
+      throw new KnownError(
+        "Only ignored files are staged. Unstage them or adjust your exclusions, then try again.",
+      );
+    }
+    throw new KnownError(statusMessage);
   }
 
   const diffSummary = await getDiffSummary(excludeFiles);
@@ -295,8 +340,21 @@ export const runCommitWithPush = async (
       const pushSpinner = spinner();
       pushSpinner.start("Pushing to remote");
       try {
-        await execa("git", ["push"]);
+        const upstream = await getUpstreamBranch();
+        const pushArgs = ["push"];
+
+        if (!upstream) {
+          const remote = await getDefaultRemote();
+          const branch = await getCurrentBranch();
+          pushArgs.push("-u", remote, branch);
+        }
+
+        const { stdout, stderr } = await execa("git", pushArgs);
         pushSpinner.stop("Pushed to remote");
+        const output = [stdout, stderr].filter(Boolean).join("\n");
+        if (output) {
+          console.log("\n" + output.trim() + "\n");
+        }
         outro(`${green("√")} Successfully pushed to remote!`);
       } catch (error: any) {
         pushSpinner.stop("Push failed");

@@ -12,7 +12,7 @@ import { cn } from "~/styles/utils";
 export function InstallCommand() {
   const [copied, setCopied] = React.useState(false);
 
-  const command = "npm install -g @koushik_xd/dash";
+  const command = "npm install -g dash-cli";
 
   const handleCopy = () => {
     navigator.clipboard
@@ -31,16 +31,16 @@ export function InstallCommand() {
         onClick={handleCopy}
       >
         npm install -g&nbsp;
-        <span className="text-foreground">@koushik_xd/dash</span>
+        <span className="text-foreground">dash-cli</span>
         <span
           className={cn(
-            "absolute right-2 ml-4 inline-flex items-center transition-opacity"
+            "absolute right-2 ml-4 inline-flex items-center transition-opacity",
           )}
         >
           <div
             className={cn(
               "inset-0 transform transition-all duration-300",
-              copied ? "scale-0 opacity-0" : "scale-100 opacity-100"
+              copied ? "scale-0 opacity-0" : "scale-100 opacity-100",
             )}
           >
             <HugeiconsIcon
@@ -52,7 +52,7 @@ export function InstallCommand() {
           <div
             className={cn(
               "absolute transform transition-all duration-300",
-              copied ? "scale-100 opacity-100" : "scale-0 opacity-0"
+              copied ? "scale-100 opacity-100" : "scale-0 opacity-0",
             )}
           >
             <HugeiconsIcon

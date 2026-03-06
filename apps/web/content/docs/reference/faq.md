@@ -169,7 +169,7 @@ Only for `dash pr` and `dash issue` commands. `dash commit` and `dash hook` work
 ### Update dash?
 
 ```bash
-npm update -g @koushik_xd/dash
+npm update -g dash-cli
 dash --version
 ```
 

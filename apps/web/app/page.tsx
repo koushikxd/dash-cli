@@ -90,7 +90,7 @@ export default function Page() {
                   [github]
                 </Link>
                 <Link
-                  href="https://www.npmjs.com/package/@koushik_xd/dash"
+                  href="https://www.npmjs.com/package/dash-cli"
                   className="hover:text-foreground transition-colors"
                   target="_blank"
                 >

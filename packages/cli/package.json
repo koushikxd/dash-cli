@@ -1,5 +1,5 @@
 {
-  "name": "@koushik_xd/dash",
+  "name": "dash-cli",
   "version": "1.6.1",
   "description": "AI-powered Git CLI for commit messages, PRs, and issues",
   "license": "MIT",

@@ -5,7 +5,7 @@ AI-powered Git CLI for commit messages, PRs, and GitHub workflows.
 ## Install
 
 ```bash
-npm install -g @koushik_xd/dash
+npm install -g dash-cli
 ```
 
 Then run:
@@ -272,4 +272,3 @@ Inspired by [noto](https://github.com/snelusha/noto) by Sithija Nelusha Silva.
 ## License
 
 MIT
-

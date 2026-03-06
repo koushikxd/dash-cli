@@ -5,7 +5,7 @@ AI-powered Git CLI. Generate commit messages, create PRs, manage issues—all fr
 ## Install
 
 ```bash
-npm install -g @koushik_xd/dash
+npm install -g dash-cli
 ```
 
 > **Linux users:** If `dash` runs the system shell instead of this CLI, use `dash-cli` instead.

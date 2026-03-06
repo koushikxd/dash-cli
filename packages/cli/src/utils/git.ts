@@ -6,7 +6,7 @@ export const assertGitRepo = async () => {
   const { stdout, failed } = await execa(
     "git",
     ["rev-parse", "--show-toplevel"],
-    { reject: false }
+    { reject: false },
   );
 
   if (failed) {
@@ -61,6 +61,38 @@ export const getStagedDiff = async (excludeFiles?: string[]) => {
   return {
     files: files.split("\n"),
     diff,
+  };
+};
+
+export const getRawStagedFiles = async (): Promise<string[]> => {
+  const { stdout } = await execa("git", ["diff", "--cached", "--name-only"]);
+  if (!stdout) return [];
+  return stdout.split("\n").filter(Boolean);
+};
+
+export const getWorkingTreeStatus = async () => {
+  const { stdout } = await execa("git", ["status", "--porcelain"]);
+  const lines = stdout.split("\n").filter(Boolean);
+  let staged = 0;
+  let unstaged = 0;
+  let untracked = 0;
+
+  for (const line of lines) {
+    if (line.startsWith("??")) {
+      untracked++;
+      continue;
+    }
+    const indexStatus = line[0];
+    const worktreeStatus = line[1];
+    if (indexStatus !== " " && indexStatus !== "?") staged++;
+    if (worktreeStatus !== " ") unstaged++;
+  }
+
+  return {
+    staged,
+    unstaged,
+    untracked,
+    total: lines.length,
   };
 };
 
@@ -139,7 +171,7 @@ export const getDiffSummary = async (excludeFiles?: string[]) => {
       } catch {
         return { file, additions: 0, deletions: 0, changes: 0 };
       }
-    })
+    }),
   );
 
   return {
@@ -167,7 +199,7 @@ export const splitDiffByFile = (diff: string): string[] => {
 
 export const buildCompactSummary = async (
   excludeFiles?: string[],
-  maxFiles: number = 20
+  maxFiles: number = 20,
 ) => {
   const summary = await getDiffSummary(excludeFiles);
   if (!summary) return null;
@@ -182,12 +214,12 @@ export const buildCompactSummary = async (
   const lines: string[] = [];
   lines.push(`Files changed: ${totalFiles}`);
   lines.push(
-    `Additions: ${totalAdditions}, Deletions: ${totalDeletions}, Total changes: ${totalChanges}`
+    `Additions: ${totalAdditions}, Deletions: ${totalDeletions}, Total changes: ${totalChanges}`,
   );
   lines.push("Top files by changes:");
   for (const f of top) {
     lines.push(
-      `- ${f.file} (+${f.additions} / -${f.deletions}, ${f.changes} changes)`
+      `- ${f.file} (+${f.additions} / -${f.deletions}, ${f.changes} changes)`,
     );
   }
   if (sorted.length > top.length) {
@@ -208,6 +240,25 @@ export const getCurrentBranch = async (): Promise<string> => {
   return stdout.trim();
 };
 
+export const getUpstreamBranch = async (): Promise<string | null> => {
+  try {
+    const { stdout } = await execa("git", [
+      "rev-parse",
+      "--abbrev-ref",
+      "--symbolic-full-name",
+      "@{u}",
+    ]);
+    return stdout.trim() || null;
+  } catch {
+    return null;
+  }
+};
+
+export const getDefaultRemote = async (): Promise<string> => {
+  const { stdout: remotes } = await execa("git", ["remote"]);
+  return remotes.split("\n")[0]?.trim() || "origin";
+};
+
 export const getBaseBranch = async (): Promise<string> => {
   const { stdout: remotes } = await execa("git", ["remote"]);
   const remote = remotes.split("\n")[0]?.trim() || "origin";
@@ -218,9 +269,7 @@ export const getBaseBranch = async (): Promise<string> => {
         reject: true,
       });
       return branch;
-    } catch {
-      continue;
-    }
+    } catch {}
   }
 
   try {
@@ -236,7 +285,7 @@ export const getBaseBranch = async (): Promise<string> => {
 };
 
 export const getCommitsSinceBase = async (
-  baseBranch: string
+  baseBranch: string,
 ): Promise<Commit[]> => {
   const { stdout: remotes } = await execa("git", ["remote"]);
   const remote = remotes.split("\n")[0]?.trim() || "origin";
@@ -289,7 +338,8 @@ export const assertGhInstalled = async (): Promise<void> => {
   const ghEnabled = await isGhEnabled();
   if (!ghEnabled) {
     throw new KnownError(
-      "GitHub CLI features are disabled.\n" + "Run `dash setup` to enable them."
+      "GitHub CLI features are disabled.\n" +
+        "Run `dash setup` to enable them.",
     );
   }
 
@@ -298,7 +348,7 @@ export const assertGhInstalled = async (): Promise<void> => {
     throw new KnownError(
       "GitHub CLI (gh) is not installed or not in PATH.\n" +
         "Install it from: https://cli.github.com/\n" +
-        "Then run `dash setup` to configure."
+        "Then run `dash setup` to configure.",
     );
   }
 };
@@ -327,7 +377,7 @@ export const getExistingPR = async (): Promise<ExistingPR | null> => {
 
 export const assertNotOnBaseBranch = async (
   currentBranch: string,
-  baseBranch: string
+  baseBranch: string,
 ): Promise<void> => {
   if (
     currentBranch === baseBranch ||
@@ -336,13 +386,13 @@ export const assertNotOnBaseBranch = async (
   ) {
     throw new KnownError(
       `Cannot create PR from ${currentBranch} branch.\n` +
-        "Please switch to a feature branch first."
+        "Please switch to a feature branch first.",
     );
   }
 };
 
 export const getDiffStatsSinceBase = async (
-  baseBranch: string
+  baseBranch: string,
 ): Promise<{ files: number; insertions: number; deletions: number }> => {
   const { stdout: remotes } = await execa("git", ["remote"]);
   const remote = remotes.split("\n")[0]?.trim() || "origin";
@@ -371,7 +421,7 @@ export const getDiffStatsSinceBase = async (
 export const buildCompactSummarySinceBase = async (
   baseBranch: string,
   excludeFiles?: string[],
-  maxFiles: number = 20
+  maxFiles: number = 20,
 ) => {
   const { stdout: remotes } = await execa("git", ["remote"]);
   const remote = remotes.split("\n")[0]?.trim() || "origin";
@@ -416,18 +466,18 @@ export const buildCompactSummarySinceBase = async (
         } catch {
           return { file, additions: 0, deletions: 0, changes: 0 };
         }
-      })
+      }),
     );
 
     const sorted = [...fileStats].sort((a, b) => b.changes - a.changes);
     const top = sorted.slice(0, Math.max(1, maxFiles));
     const totalAdditions = fileStats.reduce(
       (s, f) => s + (f.additions || 0),
-      0
+      0,
     );
     const totalDeletions = fileStats.reduce(
       (s, f) => s + (f.deletions || 0),
-      0
+      0,
     );
 
     const lines: string[] = [];
@@ -436,7 +486,7 @@ export const buildCompactSummarySinceBase = async (
     lines.push("Top files by changes:");
     for (const f of top) {
       lines.push(
-        `- ${f.file} (+${f.additions} / -${f.deletions}, ${f.changes} changes)`
+        `- ${f.file} (+${f.additions} / -${f.deletions}, ${f.changes} changes)`,
       );
     }
     if (sorted.length > top.length) {

@@ -17,7 +17,7 @@ function bumpVersion(version: string, type: semver.ReleaseType | string) {
   ) {
     if (!semver.gt(type, version))
       error(
-        `specified version is not greater than current version: ${type} <= ${version}`
+        `specified version is not greater than current version: ${type} <= ${version}`,
       );
     return type;
   }
@@ -38,7 +38,7 @@ async function isGitClean() {
 
 async function updatePackageVersions(
   version: string,
-  type: semver.ReleaseType | string
+  type: semver.ReleaseType | string,
 ) {
   const changedFiles: string[] = [];
 
@@ -95,12 +95,15 @@ async function release() {
   console.log("\npublishing to npm...");
   await $`cd packages/cli && npm publish --access public`;
 
+  console.log("\ndeprecating old package...");
+  await $`npm deprecate @koushik_xd/dash@"*" "Package moved to dash-cli. Install: npm install -g dash-cli"`;
+
   console.log("\npushing to git...");
   await $`git push && git push --tags`;
 
   console.log(`\n✨ release v${newVersion} complete!`);
   console.log(
-    `view on npm: https://www.npmjs.com/package/@koushik_xd/dash/v/${newVersion}`
+    `view on npm: https://www.npmjs.com/package/dash-cli/v/${newVersion}`,
   );
 }
 

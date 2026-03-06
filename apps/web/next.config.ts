@@ -17,7 +17,7 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/npm",
-        destination: "https://www.npmjs.com/package/@koushik_xd/dash",
+        destination: "https://www.npmjs.com/package/dash-cli",
         permanent: true,
       },
     ];
